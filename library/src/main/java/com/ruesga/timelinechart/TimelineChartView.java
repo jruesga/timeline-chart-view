@@ -78,12 +78,20 @@ public class TimelineChartView extends View {
         public double[] mSeries;
     }
 
+    public interface OnClickItemListener {
+        void onClickItem(Item selectedItem);
+    }
+
+    public interface OnLongClickItemListener {
+        void onLongClickItem(Item selectedItem);
+    }
+
     public interface OnSelectedItemChangedListener {
         void onSelectedItemChanged(Item selectedItem, boolean fromUser);
         void onNothingSelected();
     }
 
-    public interface OnColorPaletteChanged {
+    public interface OnColorPaletteChangedListener {
         void onColorPaletteChanged(int[] palette);
     }
 
@@ -171,10 +179,12 @@ public class TimelineChartView extends View {
     private final AudioManager mAudioManager;
     private MediaPlayer mSoundEffectMP;
 
+    private OnClickItemListener mOnClickItemCallback;
+    private OnLongClickItemListener mOnLongClickItemCallback;
     private Set<OnSelectedItemChangedListener> mOnSelectedItemChangedCallbacks =
             Collections.synchronizedSet(new HashSet<OnSelectedItemChangedListener>());
-    private Set<OnColorPaletteChanged> mOnColorPaletteChangedCallbacks =
-            Collections.synchronizedSet(new HashSet<OnColorPaletteChanged>());
+    private Set<OnColorPaletteChangedListener> mOnColorPaletteChangedCallbacks =
+            Collections.synchronizedSet(new HashSet<OnColorPaletteChangedListener>());
 
     private boolean mInZoomOut = false;
     private ValueAnimator mZoomAnimator;
@@ -407,19 +417,35 @@ public class TimelineChartView extends View {
         setupSoundEffects();
     }
 
-    public void addOnSelectedItemChanged(OnSelectedItemChangedListener cb) {
+    public OnClickItemListener getOnClickItemListener() {
+        return mOnClickItemCallback;
+    }
+
+    public void setOnClickItemListener(OnClickItemListener cb) {
+        mOnClickItemCallback = cb;
+    }
+
+    public OnLongClickItemListener getOnLongClickItemListener() {
+        return mOnLongClickItemCallback;
+    }
+
+    public void setOnLongClickItemListener(OnLongClickItemListener cb) {
+        mOnLongClickItemCallback = cb;
+    }
+
+    public void addOnSelectedItemChangedListener(OnSelectedItemChangedListener cb) {
         mOnSelectedItemChangedCallbacks.add(cb);
     }
 
-    public void removeOnSelectedItemChanged(OnSelectedItemChangedListener cb) {
+    public void removeOnSelectedItemChangedListener(OnSelectedItemChangedListener cb) {
         mOnSelectedItemChangedCallbacks.remove(cb);
     }
 
-    public void addOnColorPaletteChanged(OnColorPaletteChanged cb) {
+    public void addOnColorPaletteChangedListener(OnColorPaletteChangedListener cb) {
         mOnColorPaletteChangedCallbacks.add(cb);
     }
 
-    public void removeOnColorPaletteChanged(OnColorPaletteChanged cb) {
+    public void removeOnColorPaletteChangedListener(OnColorPaletteChangedListener cb) {
         mOnColorPaletteChangedCallbacks.remove(cb);
     }
 
@@ -1076,7 +1102,7 @@ public class TimelineChartView extends View {
     }
 
     private void notifyOnColorPaletteChanged() {
-        for (OnColorPaletteChanged cb : mOnColorPaletteChangedCallbacks) {
+        for (OnColorPaletteChangedListener cb : mOnColorPaletteChangedCallbacks) {
             cb.onColorPaletteChanged(mCurrentPalette);
         }
     }

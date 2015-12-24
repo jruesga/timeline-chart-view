@@ -30,6 +30,8 @@ import android.widget.Toast;
 
 import com.ruesga.timelinechart.InMemoryCursor;
 import com.ruesga.timelinechart.TimelineChartView;
+import com.ruesga.timelinechart.TimelineChartView.OnColorPaletteChangedListener;
+import com.ruesga.timelinechart.TimelineChartView.OnSelectedItemChangedListener;
 
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
@@ -197,7 +199,7 @@ public class SampleActivity extends AppCompatActivity {
         }
 
         // Setup graph view data and start listening
-        mGraph.addOnSelectedItemChanged(new TimelineChartView.OnSelectedItemChangedListener() {
+        mGraph.addOnSelectedItemChangedListener(new OnSelectedItemChangedListener() {
             @Override
             public void onSelectedItemChanged(TimelineChartView.Item selectedItem, boolean fromUser) {
                 mTimestamp.setText(DATETIME_FORMATTER.format(selectedItem.mTimestamp));
@@ -214,7 +216,7 @@ public class SampleActivity extends AppCompatActivity {
                 }
             }
         });
-        mGraph.addOnColorPaletteChanged(new TimelineChartView.OnColorPaletteChanged() {
+        mGraph.addOnColorPaletteChangedListener(new OnColorPaletteChangedListener() {
             @Override
             public void onColorPaletteChanged(int[] palette) {
                 int count = mSeriesColors.length;
@@ -223,7 +225,21 @@ public class SampleActivity extends AppCompatActivity {
                 }
             }
         });
+        mGraph.setOnClickItemListener(new TimelineChartView.OnClickItemListener() {
+            @Override
+            public void onClickItem(TimelineChartView.Item selectedItem) {
+
+            }
+        });
+        mGraph.setOnLongClickItemListener(new TimelineChartView.OnLongClickItemListener() {
+            @Override
+            public void onLongClickItem(TimelineChartView.Item selectedItem) {
+
+            }
+        });
+
         mGraph.observeData(mCursor);
+
     }
 
     @Override
