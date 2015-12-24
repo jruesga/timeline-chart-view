@@ -140,6 +140,7 @@ public class TimelineChartView extends View {
     private final Path mCurrentPositionPath = new Path();
 
     private long mCurrentTimestamp = -1;
+    private long mLastTimestamp = -1;
     private float mCurrentOffset = 0.f;
     private float mLastOffset = -1.f;
     private float mMaxOffset = 0.f;
@@ -160,6 +161,13 @@ public class TimelineChartView extends View {
     private OverScroller mScroller;
     private final float mTouchSlop;
     private final float mMaxFlingVelocity;
+
+    private static final int SCROLLING_STATE_IDLE = 0;
+    private static final int SCROLLING_STATE_INITIALIZE = 1;
+    private static final int SCROLLING_STATE_MOVING = 2;
+    private static final int SCROLLING_STATE_FLINGING = 3;
+    private static final int SCROLLING_STATE_SCROLLING = 4;
+    private int mScrollingState = SCROLLING_STATE_IDLE;
 
     private static final int MSG_ON_SELECTION_ITEM_CHANGED = 1;
 
@@ -503,6 +511,7 @@ public class TimelineChartView extends View {
                 }
                 mVelocityTracker.addMovement(event);
                 mScroller.forceFinished(true);
+                mScrollingState = SCROLLING_STATE_INITIALIZE;
 
                 mInitialTouchOffset = mCurrentOffset;
                 mInitialTouchX = event.getX();
@@ -518,6 +527,7 @@ public class TimelineChartView extends View {
                     mCurrentOffset = mMaxOffset;
                 }
                 mVelocityTracker.computeCurrentVelocity(1000, mMaxFlingVelocity);
+                mScrollingState = SCROLLING_STATE_MOVING;
                 ViewCompat.postInvalidateOnAnimation(this);
                 break;
 
@@ -526,6 +536,7 @@ public class TimelineChartView extends View {
                 final int velocity = (int) VelocityTrackerCompat.getXVelocity(
                         mVelocityTracker, pointerId);
                 mScroller.forceFinished(true);
+                mScrollingState = SCROLLING_STATE_FLINGING;
                 mScroller.fling((int) mCurrentOffset, 0, velocity, 0, 0, (int) mMaxOffset, 0, 0);
                 ViewCompat.postInvalidateOnAnimation(this);
                 break;
@@ -548,6 +559,10 @@ public class TimelineChartView extends View {
             }
             mCurrentOffset = x;
             ViewCompat.postInvalidateOnAnimation(this);
+        } else {
+            // Reset state
+            mScrollingState = SCROLLING_STATE_IDLE;
+            mLastTimestamp = -1;
         }
 
         // FIXME If we are not centered in a item, perform an scroll
@@ -556,15 +571,20 @@ public class TimelineChartView extends View {
         // Determine the highlighted item and notify it to callbacks
         long timestamp = computeTimestampFromOffset(mCurrentOffset);
         if (mCurrentTimestamp != timestamp) {
-            boolean fromUser = mCurrentTimestamp != -2;
-            mCurrentTimestamp = timestamp;
-            if (fromUser) {
-                performSelectionSoundEffect();
-            }
+            // Don't perform selection operations while we are just scrolling
+            if (mScrollingState != SCROLLING_STATE_SCROLLING) {
+                boolean fromUser = mCurrentTimestamp != -2;
+                mCurrentTimestamp = timestamp;
+                if (fromUser) {
+                    performSelectionSoundEffect();
+                }
 
-            // Notify any valid item, but only notify invalid items if we are not panning/scrolling
-            if (mCurrentTimestamp >= 0 || !scrolling) {
-                Message.obtain(mUiHandler, MSG_ON_SELECTION_ITEM_CHANGED, fromUser).sendToTarget();
+                // Notify any valid item, but only notify invalid items if
+                // we are not panning/scrolling
+                if (mCurrentTimestamp >= 0 || !scrolling) {
+                    Message.obtain(mUiHandler, MSG_ON_SELECTION_ITEM_CHANGED, fromUser)
+                            .sendToTarget();
+                }
             }
         }
     }
@@ -582,6 +602,8 @@ public class TimelineChartView extends View {
         if (offset >= 0 && offset != mCurrentOffset) {
             int dx = (int) (mCurrentOffset - offset) * -1;
             mScroller.forceFinished(true);
+            mScrollingState = SCROLLING_STATE_SCROLLING;
+            mLastTimestamp = mCurrentTimestamp;
             mScroller.startScroll((int) mCurrentOffset, 0, dx, 0);
             ViewCompat.postInvalidateOnAnimation(this);
         }
@@ -694,10 +716,14 @@ public class TimelineChartView extends View {
                     if (mGraphMode == GRAPH_MODE_BARS_SIDE_BY_SIDE) {
                         x1 = x - halfItemBarWidth + (bw * n);
                         x2 = x1 + bw;
-                        paint = (x - halfItemBarWidth) < cx && (x + halfItemBarWidth) > cx
+                        paint = (x - halfItemBarWidth) < cx && (x + halfItemBarWidth) > cx &&
+                                (mLastTimestamp == mCurrentTimestamp ||
+                                        (mScrollingState != SCROLLING_STATE_SCROLLING))
                                 ? highlightSeriesBgPaint[indexes[j]] : seriesBgPaint[indexes[j]];
                     } else {
-                        paint = x1 < cx && x2 > cx
+                        paint = x1 < cx && x2 > cx &&
+                                (mLastTimestamp == mCurrentTimestamp ||
+                                        (mScrollingState != SCROLLING_STATE_SCROLLING))
                                 ? highlightSeriesBgPaint[indexes[j]] : seriesBgPaint[indexes[j]];
                     }
 
@@ -714,7 +740,9 @@ public class TimelineChartView extends View {
                     float h = (float) ((height * ((values[j] * 100) / maxValue)) / 100);
                     y1 = y2 - h;
 
-                    final Paint paint = x1 < cx && x2 > cx
+                    final Paint paint = x1 < cx && x2 > cx &&
+                            (mLastTimestamp == mCurrentTimestamp ||
+                                    (mScrollingState != SCROLLING_STATE_SCROLLING))
                             ? highlightSeriesBgPaint[indexes[j]] : seriesBgPaint[indexes[j]];
                     c.drawRect(
                             x1,
