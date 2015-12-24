@@ -1,0 +1,12 @@
+apply plugin: 'com.android.library'
+
+android {
+    dependencies {
+        compile 'com.android.support:support-v4:' + rootProject.subprojects.ext.supportVersion
+    }
+
+    defaultConfig {
+        resourcePrefix 'tlc'
+        consumerProguardFiles file('proguard.txt')
+    }
+}

@@ -1,0 +1,20 @@
+apply plugin: 'com.android.application'
+
+dependencies {
+    compile 'com.android.support:support-v4:' + rootProject.subprojects.ext.supportVersion
+    compile 'com.android.support:appcompat-v7:' + rootProject.subprojects.ext.supportVersion
+    compile 'com.android.support:design:' + rootProject.subprojects.ext.supportVersion
+    compile 'com.github.ismaeltoe:flowlayout:1.0'
+    compile project(':library')
+}
+
+android {
+    defaultConfig {
+        applicationId "com.ruesga.timelinechart.sample"
+        versionCode 1
+        versionName "1.0"
+
+        set("appName", "TimelineChart View Sample")
+        resValue "string", "app_name", android.defaultConfig.appName
+    }
+}
