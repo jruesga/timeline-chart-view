@@ -197,7 +197,7 @@ public class SampleActivity extends AppCompatActivity {
         }
 
         // Setup graph view data and start listening
-        mGraph.addOnSelectedItemChanged(new TimelineChartView.OnSelectedItemChanged() {
+        mGraph.addOnSelectedItemChanged(new TimelineChartView.OnSelectedItemChangedListener() {
             @Override
             public void onSelectedItemChanged(TimelineChartView.Item selectedItem, boolean fromUser) {
                 mTimestamp.setText(DATETIME_FORMATTER.format(selectedItem.mTimestamp));

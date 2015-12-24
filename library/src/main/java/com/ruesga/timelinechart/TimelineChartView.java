@@ -78,7 +78,7 @@ public class TimelineChartView extends View {
         public double[] mSeries;
     }
 
-    public interface OnSelectedItemChanged {
+    public interface OnSelectedItemChangedListener {
         void onSelectedItemChanged(Item selectedItem, boolean fromUser);
         void onNothingSelected();
     }
@@ -171,8 +171,8 @@ public class TimelineChartView extends View {
     private final AudioManager mAudioManager;
     private MediaPlayer mSoundEffectMP;
 
-    private Set<OnSelectedItemChanged> mOnSelectedItemChangedCallbacks =
-            Collections.synchronizedSet(new HashSet<OnSelectedItemChanged>());
+    private Set<OnSelectedItemChangedListener> mOnSelectedItemChangedCallbacks =
+            Collections.synchronizedSet(new HashSet<OnSelectedItemChangedListener>());
     private Set<OnColorPaletteChanged> mOnColorPaletteChangedCallbacks =
             Collections.synchronizedSet(new HashSet<OnColorPaletteChanged>());
 
@@ -407,11 +407,11 @@ public class TimelineChartView extends View {
         setupSoundEffects();
     }
 
-    public void addOnSelectedItemChanged(OnSelectedItemChanged cb) {
+    public void addOnSelectedItemChanged(OnSelectedItemChangedListener cb) {
         mOnSelectedItemChangedCallbacks.add(cb);
     }
 
-    public void removeOnSelectedItemChanged(OnSelectedItemChanged cb) {
+    public void removeOnSelectedItemChanged(OnSelectedItemChangedListener cb) {
         mOnSelectedItemChangedCallbacks.remove(cb);
     }
 
@@ -1057,7 +1057,7 @@ public class TimelineChartView extends View {
 
         Pair<double[], int[]> data = mData.get(mCurrentTimestamp);
         if (data == null) {
-            for (OnSelectedItemChanged cb : mOnSelectedItemChangedCallbacks) {
+            for (OnSelectedItemChangedListener cb : mOnSelectedItemChangedCallbacks) {
                 cb.onNothingSelected();
             }
         } else {
@@ -1069,7 +1069,7 @@ public class TimelineChartView extends View {
                 item.mSeries[i] = data.first[data.second[i]];
             }
 
-            for (OnSelectedItemChanged cb : mOnSelectedItemChangedCallbacks) {
+            for (OnSelectedItemChangedListener cb : mOnSelectedItemChangedCallbacks) {
                 cb.onSelectedItemChanged(item, fromUser);
             }
         }
