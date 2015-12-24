@@ -34,6 +34,7 @@ import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.Message;
 import android.support.annotation.RawRes;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.util.LongSparseArray;
@@ -152,11 +153,18 @@ public class TimelineChartView extends View {
     private final float mTouchSlop;
     private final float mMaxFlingVelocity;
 
+    private static final int MSG_ON_SELECTION_ITEM_CHANGED = 1;
+
     private final Handler mUiHandler;
-    private final Runnable mOnSelectionItemChangedNotification = new Runnable() {
+    private final Handler.Callback mUiHandlerMessenger = new Handler.Callback() {
         @Override
-        public void run() {
-            notifyOnSelectionItemChanged(true);
+        public boolean handleMessage(Message msg) {
+            switch (msg.what) {
+                case MSG_ON_SELECTION_ITEM_CHANGED:
+                    notifyOnSelectionItemChanged((boolean) msg.obj);
+                    return true;
+            }
+            return false;
         }
     };
 
@@ -189,7 +197,7 @@ public class TimelineChartView extends View {
     public TimelineChartView(Context ctx, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
         super(ctx, attrs, defStyleAttr, defStyleRes);
 
-        mUiHandler = new Handler(Looper.getMainLooper());
+        mUiHandler = new Handler(Looper.getMainLooper(), mUiHandlerMessenger);
         mAudioManager = (AudioManager) ctx.getSystemService(Context.AUDIO_SERVICE);
 
         final Resources res = getResources();
@@ -522,12 +530,15 @@ public class TimelineChartView extends View {
         // Determine the highlighted item and notify it to callbacks
         long timestamp = computeTimestampFromOffset(mCurrentOffset);
         if (mCurrentTimestamp != timestamp) {
+            boolean fromUser = mCurrentTimestamp != -2;
             mCurrentTimestamp = timestamp;
-            performSelectionSoundEffect();
+            if (fromUser) {
+                performSelectionSoundEffect();
+            }
 
             // Notify any valid item, but only notify invalid items if we are not panning/scrolling
-            if (mCurrentTimestamp != -1 || !scrolling) {
-                mUiHandler.post(mOnSelectionItemChangedNotification);
+            if (mCurrentTimestamp >= 0 || !scrolling) {
+                Message.obtain(mUiHandler, MSG_ON_SELECTION_ITEM_CHANGED, fromUser).sendToTarget();
             }
         }
     }
@@ -948,14 +959,12 @@ public class TimelineChartView extends View {
             float maxOffset = (mBarItemWidth + mBarItemSpace) * size;
 
             //swap data
-            /*if (data.get(mCurrentTimestamp) == null) {
-                mCurrentTimestamp = data.keyAt(data.size() - 1);
-            }*/
             synchronized (mLock) {
                 mData = data;
                 mMaxValue = max;
                 mLastOffset = -1.f;
                 mMaxOffset = maxOffset;
+                mCurrentTimestamp = -2;
             }
         } else {
             // Cursor is empty or closed
