@@ -228,12 +228,18 @@ public class SampleActivity extends AppCompatActivity {
         mGraph.setOnClickItemListener(new TimelineChartView.OnClickItemListener() {
             @Override
             public void onClickItem(TimelineChartView.Item selectedItem) {
-
+                String timestamp = DATETIME_FORMATTER.format(selectedItem.mTimestamp);
+                Toast.makeText(SampleActivity.this, "onClickItem => " + timestamp,
+                        Toast.LENGTH_SHORT).show();
+                mGraph.smoothScrollTo(selectedItem.mTimestamp);
             }
         });
         mGraph.setOnLongClickItemListener(new TimelineChartView.OnLongClickItemListener() {
             @Override
             public void onLongClickItem(TimelineChartView.Item selectedItem) {
+                String timestamp = DATETIME_FORMATTER.format(selectedItem.mTimestamp);
+                Toast.makeText(SampleActivity.this, "onLongClickItem => " + timestamp,
+                        Toast.LENGTH_SHORT).show();
 
             }
         });

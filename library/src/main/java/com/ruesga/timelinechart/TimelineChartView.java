@@ -110,6 +110,7 @@ public class TimelineChartView extends View {
     private int mSeries;
     private LongSparseArray<Pair<double[],int[]>> mData = new LongSparseArray<>();
     private double mMaxValue;
+    private final Item mItem = new Item();
 
     private final RectF mViewArea = new RectF();
     private final RectF mGraphArea = new RectF();
@@ -159,8 +160,10 @@ public class TimelineChartView extends View {
 
     private VelocityTracker mVelocityTracker;
     private OverScroller mScroller;
+    private final long mLongPressTimeout;
     private final float mTouchSlop;
     private final float mMaxFlingVelocity;
+    private long mLastPressTimestamp;
 
     private static final int SCROLLING_STATE_IDLE = 0;
     private static final int SCROLLING_STATE_INITIALIZE = 1;
@@ -170,6 +173,8 @@ public class TimelineChartView extends View {
     private int mScrollingState = SCROLLING_STATE_IDLE;
 
     private static final int MSG_ON_SELECTION_ITEM_CHANGED = 1;
+    private static final int MSG_ON_CLICK_ITEM = 2;
+    private static final int MSG_ON_LONG_CLICK_ITEM = 3;
 
     private final Handler mUiHandler;
     private final Handler.Callback mUiHandlerMessenger = new Handler.Callback() {
@@ -178,6 +183,12 @@ public class TimelineChartView extends View {
             switch (msg.what) {
                 case MSG_ON_SELECTION_ITEM_CHANGED:
                     notifyOnSelectionItemChanged((boolean) msg.obj);
+                    return true;
+                case MSG_ON_CLICK_ITEM:
+                    notifyOnClickItem((long) msg.obj);
+                    return true;
+                case MSG_ON_LONG_CLICK_ITEM:
+                    notifyOnLongClickItem((long) msg.obj);
                     return true;
             }
             return false;
@@ -222,6 +233,7 @@ public class TimelineChartView extends View {
         final Resources.Theme theme = ctx.getTheme();
 
         final ViewConfiguration vc = ViewConfiguration.get(ctx);
+        mLongPressTimeout = ViewConfiguration.getLongPressTimeout();
         mTouchSlop = vc.getScaledTouchSlop();
         mMaxFlingVelocity = vc.getScaledMaximumFlingVelocity();
         mScroller = new OverScroller(ctx);
@@ -465,6 +477,7 @@ public class TimelineChartView extends View {
         if (mCursor != null) {
             mCursor.close();
             mSeries = 0;
+            mItem.mSeries = new double[mSeries];
         }
 
         // Save the cursor reference and listen for changes
@@ -489,6 +502,7 @@ public class TimelineChartView extends View {
         if (mCursor != null && !mCursor.isClosed()) {
             mCursor.close();
             mSeries = 0;
+            mItem.mSeries = new double[mSeries];
         }
         clear();
         mVelocityTracker.recycle();
@@ -496,10 +510,11 @@ public class TimelineChartView extends View {
     }
 
     @Override
-    public boolean onTouchEvent(MotionEvent event) {
-        int action = event.getActionMasked();
-        int index = event.getActionIndex();
-        int pointerId = event.getPointerId(index);
+    public boolean onTouchEvent(final MotionEvent event) {
+        final int action = event.getActionMasked();
+        final int index = event.getActionIndex();
+        final int pointerId = event.getPointerId(index);
+        final long now = System.currentTimeMillis();
 
         switch (action) {
             case MotionEvent.ACTION_DOWN:
@@ -515,30 +530,61 @@ public class TimelineChartView extends View {
 
                 mInitialTouchOffset = mCurrentOffset;
                 mInitialTouchX = event.getX();
+                mLastPressTimestamp = now;
                 break;
 
             case MotionEvent.ACTION_MOVE:
                 mVelocityTracker.addMovement(event);
                 float diff = event.getX() - mInitialTouchX;
-                mCurrentOffset = mInitialTouchOffset + diff;
-                if (mCurrentOffset < 0) {
-                    mCurrentOffset = 0;
-                } else if (mCurrentOffset > mMaxOffset) {
-                    mCurrentOffset = mMaxOffset;
+                if (Math.abs(diff) > mTouchSlop || mScrollingState >= SCROLLING_STATE_MOVING) {
+                    mCurrentOffset = mInitialTouchOffset + diff;
+                    if (mCurrentOffset < 0) {
+                        mCurrentOffset = 0;
+                    } else if (mCurrentOffset > mMaxOffset) {
+                        mCurrentOffset = mMaxOffset;
+                    }
+                    mVelocityTracker.computeCurrentVelocity(1000, mMaxFlingVelocity);
+                    mScrollingState = SCROLLING_STATE_MOVING;
+                    ViewCompat.postInvalidateOnAnimation(this);
                 }
-                mVelocityTracker.computeCurrentVelocity(1000, mMaxFlingVelocity);
-                mScrollingState = SCROLLING_STATE_MOVING;
-                ViewCompat.postInvalidateOnAnimation(this);
                 break;
 
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
-                final int velocity = (int) VelocityTrackerCompat.getXVelocity(
-                        mVelocityTracker, pointerId);
-                mScroller.forceFinished(true);
-                mScrollingState = SCROLLING_STATE_FLINGING;
-                mScroller.fling((int) mCurrentOffset, 0, velocity, 0, 0, (int) mMaxOffset, 0, 0);
-                ViewCompat.postInvalidateOnAnimation(this);
+                if (mScrollingState >= SCROLLING_STATE_MOVING) {
+                    final int velocity = (int) VelocityTrackerCompat.getXVelocity(
+                            mVelocityTracker, pointerId);
+                    mScroller.forceFinished(true);
+                    mScrollingState = SCROLLING_STATE_FLINGING;
+                    mScroller.fling((int) mCurrentOffset, 0, velocity, 0, 0, (int) mMaxOffset, 0, 0);
+                    ViewCompat.postInvalidateOnAnimation(this);
+                } else {
+                    // Reset scrolling state
+                    mScrollingState = SCROLLING_STATE_IDLE;
+
+                    if (action == MotionEvent.ACTION_UP) {
+                        // we are in a tap or long press action
+                        final long timeDiff = (now - mLastPressTimestamp);
+                        // If diff < 0, that means that time have change. ignore this event
+                        if (timeDiff >= 0) {
+                            // Retrieve timestamp and notify events
+                            float offset = mInitialTouchOffset + event.getX() - mInitialTouchX;
+                            final long ts = computeTimestampFromOffset(offset);
+                            if (timeDiff > mLongPressTimeout) {
+                                // Long press
+                                Message.obtain(mUiHandler, MSG_ON_LONG_CLICK_ITEM, ts)
+                                        .sendToTarget();
+
+                            } else/* if (timeDiff > mTapTimeout)*/ {
+                                // Tap
+                                Message.obtain(mUiHandler, MSG_ON_CLICK_ITEM, ts)
+                                        .sendToTarget();
+                            }
+                        }
+                    }
+                }
+
+                mLastPressTimestamp = -1;
                 break;
         }
         return true;
@@ -559,7 +605,7 @@ public class TimelineChartView extends View {
             }
             mCurrentOffset = x;
             ViewCompat.postInvalidateOnAnimation(this);
-        } else {
+        } else if (mScrollingState > SCROLLING_STATE_MOVING) {
             // Reset state
             mScrollingState = SCROLLING_STATE_IDLE;
             mLastTimestamp = -1;
@@ -980,6 +1026,7 @@ public class TimelineChartView extends View {
             double max = 0d;
             LongSparseArray<Pair<double[], int[]>> data = new LongSparseArray<>();
             mSeries = mCursor.getColumnCount() - 1;
+            mItem.mSeries = new double[mSeries];
 
             do {
                 long timestamp = mCursor.getLong(0);
@@ -1104,25 +1151,35 @@ public class TimelineChartView extends View {
         }
     }
 
+    private void notifyOnClickItem(long timestamp) {
+        if (mOnClickItemCallback != null) {
+            final Item item = obtainCurrentItem(timestamp);
+            if (item != null) {
+                mOnClickItemCallback.onClickItem(item);
+            }
+        }
+    }
+
+    private void notifyOnLongClickItem(long timestamp) {
+        if (mOnLongClickItemCallback != null) {
+            final Item item = obtainCurrentItem(timestamp);
+            if (item != null) {
+                mOnLongClickItemCallback.onLongClickItem(item);
+            }
+        }
+    }
+
     private void notifyOnSelectionItemChanged(boolean fromUser) {
         if (mOnSelectedItemChangedCallbacks.size() == 0) {
             return;
         }
 
-        Pair<double[], int[]> data = mData.get(mCurrentTimestamp);
-        if (data == null) {
+        final Item item  = obtainCurrentItem(mCurrentTimestamp);
+        if (item == null) {
             for (OnSelectedItemChangedListener cb : mOnSelectedItemChangedCallbacks) {
                 cb.onNothingSelected();
             }
         } else {
-            // Compute current item. Restore original sort before notify
-            Item item = new Item();
-            item.mTimestamp = mCurrentTimestamp;
-            item.mSeries = new double[data.first.length];
-            for (int i = 0; i < data.first.length; i++) {
-                item.mSeries[i] = data.first[data.second[i]];
-            }
-
             for (OnSelectedItemChangedListener cb : mOnSelectedItemChangedCallbacks) {
                 cb.onSelectedItemChanged(item, fromUser);
             }
@@ -1133,6 +1190,25 @@ public class TimelineChartView extends View {
         for (OnColorPaletteChangedListener cb : mOnColorPaletteChangedCallbacks) {
             cb.onColorPaletteChanged(mCurrentPalette);
         }
+    }
+
+    private Item obtainCurrentItem(long timestamp) {
+        final Pair<double[], int[]> data;
+        final int count;
+        synchronized (mLock) {
+            data = mData.get(timestamp);
+            count = mSeries;
+        }
+        if (data == null) {
+            return null;
+        }
+
+        // Compute current item. Restore original sort before notify
+        mItem.mTimestamp = mCurrentTimestamp;
+        for (int i = 0; i < count; i++) {
+            mItem.mSeries[i] = data.first[data.second[i]];
+        }
+        return mItem;
     }
 
     private void ensureBarWidth() {
