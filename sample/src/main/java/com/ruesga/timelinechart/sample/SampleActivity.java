@@ -227,20 +227,33 @@ public class SampleActivity extends AppCompatActivity {
         });
         mGraph.setOnClickItemListener(new TimelineChartView.OnClickItemListener() {
             @Override
-            public void onClickItem(TimelineChartView.Item selectedItem) {
-                String timestamp = DATETIME_FORMATTER.format(selectedItem.mTimestamp);
-                Toast.makeText(SampleActivity.this, "onClickItem => " + timestamp,
-                        Toast.LENGTH_SHORT).show();
-                mGraph.smoothScrollTo(selectedItem.mTimestamp);
+            public void onClickItem(TimelineChartView.Item item, int serie) {
+                String timestamp = DATETIME_FORMATTER.format(item.mTimestamp);
+                Toast.makeText(SampleActivity.this, "onClickItem => " + timestamp
+                        + ", serie: " + serie, Toast.LENGTH_SHORT).show();
+                mGraph.smoothScrollTo(item.mTimestamp);
             }
         });
         mGraph.setOnLongClickItemListener(new TimelineChartView.OnLongClickItemListener() {
             @Override
-            public void onLongClickItem(TimelineChartView.Item selectedItem) {
-                String timestamp = DATETIME_FORMATTER.format(selectedItem.mTimestamp);
-                Toast.makeText(SampleActivity.this, "onLongClickItem => " + timestamp,
-                        Toast.LENGTH_SHORT).show();
+            public void onLongClickItem(TimelineChartView.Item item, int serie) {
+                String timestamp = DATETIME_FORMATTER.format(item.mTimestamp);
+                Toast.makeText(SampleActivity.this, "onLongClickItem => " + timestamp
+                        + ", serie: " + serie, Toast.LENGTH_SHORT).show();
 
+            }
+        });
+        mGraph.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Toast.makeText(SampleActivity.this, "onClick", Toast.LENGTH_SHORT).show();
+            }
+        });
+        mGraph.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                Toast.makeText(SampleActivity.this, "onLongClick", Toast.LENGTH_SHORT).show();
+                return false;
             }
         });
 
