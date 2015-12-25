@@ -553,7 +553,6 @@ public class TimelineChartView extends View {
 
     @Override
     public boolean onTouchEvent(final MotionEvent event) {
-System.out.println("jrc: onTouchEvent: " +  + event.getActionMasked());
         // Ignore events while performing scrolling animation
         if (mState == STATE_ZOOMING) {
             return true;
@@ -1068,7 +1067,7 @@ System.out.println("jrc: onTouchEvent: " +  + event.getActionMasked());
 
     private void computeMaxBarItemsInScreen() {
         ensureBarWidth();
-        mMaxBarItemsInScreen = (int) Math.ceil(mGraphArea.width() / mBarWidth) + 1;
+        mMaxBarItemsInScreen = (int) Math.ceil(mGraphArea.width() / mBarWidth) + 2;
     }
 
     private void computeCurrentPositionIndicatorDimensions() {
