@@ -54,6 +54,7 @@ import android.view.VelocityTracker;
 import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.animation.DecelerateInterpolator;
+import android.widget.EdgeEffect;
 import android.widget.OverScroller;
 
 import com.ruesga.timelinechart.helpers.ArraysHelper;
@@ -157,6 +158,11 @@ public class TimelineChartView extends View {
     private boolean mPlaySelectionSoundEffect;
     private int mSelectionSoundEffectSource;
     private boolean mAnimateCursorSwapTransition;
+
+    private EdgeEffect mEdgeEffectLeft;
+    private EdgeEffect mEdgeEffectRight;
+    private boolean mEdgeEffectLeftActive;
+    private boolean mEdgeEffectRightActive;
 
     private int[] mUserPalette;
     private int[] mCurrentPalette;
@@ -343,6 +349,9 @@ public class TimelineChartView extends View {
 
         // Initialize stuff
         setupTickLabels();
+        if (getOverScrollMode() != OVER_SCROLL_NEVER) {
+            setupEdgeEffects();
+        }
         setupAnimators();
         setupSoundEffects();
 
@@ -373,6 +382,7 @@ public class TimelineChartView extends View {
         if (mGraphAreaBgPaint.getColor() != color) {
             mGraphAreaBgPaint.setColor(color);
             setupSeriesBackground(color);
+            setupEdgeEffectColor();
             ViewCompat.postInvalidateOnAnimation(this);
         }
     }
@@ -575,6 +585,7 @@ public class TimelineChartView extends View {
                 }
                 mVelocityTracker.addMovement(event);
                 mScroller.forceFinished(true);
+                releaseEdgeEffects();
                 mState = STATE_INITIALIZE;
 
                 mLongPressDetector.mLongPressTriggered = false;
@@ -598,8 +609,10 @@ public class TimelineChartView extends View {
 
                     mCurrentOffset = mInitialTouchOffset + diff;
                     if (mCurrentOffset < 0) {
+                        onOverScroll();
                         mCurrentOffset = 0;
                     } else if (mCurrentOffset > mMaxOffset) {
+                        onOverScroll();
                         mCurrentOffset = mMaxOffset;
                     }
                     mVelocityTracker.computeCurrentVelocity(1000, mMaxFlingVelocity);
@@ -621,6 +634,7 @@ public class TimelineChartView extends View {
                             mVelocityTracker, pointerId);
                     mScroller.forceFinished(true);
                     mState = STATE_FLINGING;
+                    releaseEdgeEffects();
                     mScroller.fling((int) mCurrentOffset, 0, velocity, 0, 0, (int) mMaxOffset, 0, 0);
                     ViewCompat.postInvalidateOnAnimation(this);
                 } else {
@@ -647,6 +661,29 @@ public class TimelineChartView extends View {
         return false;
     }
 
+    private void onOverScroll() {
+        final boolean needOverscroll;
+        synchronized (mLock) {
+            needOverscroll = mData.size() >= Math.floor(mMaxBarItemsInScreen / 2);
+        }
+        if (getOverScrollMode() == OVER_SCROLL_ALWAYS ||
+                (getOverScrollMode() == OVER_SCROLL_IF_CONTENT_SCROLLS && needOverscroll)) {
+            boolean needsInvalidate = false;
+            if (mCurrentOffset > mMaxOffset) {
+                mEdgeEffectLeft.onPull(mCurrentOffset - mMaxOffset);
+                needsInvalidate = true;
+            }
+            if (mCurrentOffset < 0) {
+                mEdgeEffectRight.onPull(mCurrentOffset);
+                needsInvalidate = true;
+            }
+
+            if (needsInvalidate) {
+                ViewCompat.postInvalidateOnAnimation(this);
+            }
+        }
+    }
+
     @Override
     public void computeScroll() {
         super.computeScroll();
@@ -666,9 +703,32 @@ public class TimelineChartView extends View {
             mCurrentOffset = x;
             ViewCompat.postInvalidateOnAnimation(this);
         } else if (mState > STATE_MOVING) {
-            // Reset state
-            mState = STATE_IDLE;
-            mLastTimestamp = -1;
+            boolean needsInvalidate = false;
+            final boolean needOverscroll;
+            synchronized (mLock) {
+                needOverscroll = mData.size() >= Math.floor(mMaxBarItemsInScreen / 2);
+            }
+            if (getOverScrollMode() == OVER_SCROLL_ALWAYS ||
+                    (getOverScrollMode() == OVER_SCROLL_IF_CONTENT_SCROLLS && needOverscroll)) {
+                float x = mScroller.getCurrX();
+                if (x >= mMaxOffset && mEdgeEffectLeft.isFinished() && !mEdgeEffectLeftActive) {
+                    mEdgeEffectLeft.onAbsorb((int) mScroller.getCurrVelocity());
+                    mEdgeEffectLeftActive = true;
+                    needsInvalidate = true;
+                }
+                if (x <= 0 && mEdgeEffectRight.isFinished() && !mEdgeEffectRightActive) {
+                    mEdgeEffectRight.onAbsorb((int) mScroller.getCurrVelocity());
+                    mEdgeEffectRightActive = true;
+                    needsInvalidate = true;
+                }
+            }
+            if (!needsInvalidate) {
+                // Reset state
+                mState = STATE_IDLE;
+                mLastTimestamp = -1;
+            } else {
+                ViewCompat.postInvalidateOnAnimation(this);
+            }
         }
 
         // FIXME If we are not centered in a item, perform an scroll
@@ -693,6 +753,17 @@ public class TimelineChartView extends View {
                 }
             }
         }
+    }
+
+    @Override
+    public void setOverScrollMode(int overScrollMode) {
+        if(overScrollMode != OVER_SCROLL_NEVER) {
+            setupEdgeEffects();
+        } else {
+            mEdgeEffectLeft = null;
+            mEdgeEffectRight = null;
+        }
+        super.setOverScrollMode(overScrollMode);
     }
 
     public void scrollTo(long timestamp) {
@@ -881,6 +952,9 @@ public class TimelineChartView extends View {
                 c.drawPath(mCurrentPositionPath, mFooterAreaBgPaint);
             }
         }
+
+        // Draw the edge scrolling effects
+        drawEdgeEffects(c);
     }
 
     private void drawBarItems(Canvas c, LongSparseArray<Pair<double[], int[]>> data,
@@ -996,6 +1070,33 @@ public class TimelineChartView extends View {
         }
     }
 
+    private void drawEdgeEffects(Canvas c) {
+        boolean needsInvalidate = false;
+
+        if (mEdgeEffectLeft != null && !mEdgeEffectLeft.isFinished()) {
+            final int restoreCount = c.save();
+            c.rotate(270);
+            c.translate(-mGraphArea.height() - mGraphArea.top, mGraphArea.left);
+            mEdgeEffectLeft.setSize((int) mGraphArea.height(), (int) mGraphArea.width());
+            needsInvalidate = mEdgeEffectLeft.draw(c);
+            c.restoreToCount(restoreCount);
+        }
+
+        if (mEdgeEffectRight != null && !mEdgeEffectRight.isFinished()) {
+            final int restoreCount = c.save();
+            c.rotate(90);
+            c.translate(mGraphArea.top,
+                    -getWidth() + (getWidth() - mGraphArea.right));
+            mEdgeEffectRight.setSize((int) mGraphArea.height(), (int) mGraphArea.width());
+            needsInvalidate |= mEdgeEffectRight.draw(c);
+            c.restoreToCount(restoreCount);
+        }
+
+        if (needsInvalidate) {
+            ViewCompat.postInvalidateOnAnimation(this);
+        }
+    }
+
     @Override
     protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
         super.onLayout(changed, left, top, right, bottom);
@@ -1092,6 +1193,28 @@ public class TimelineChartView extends View {
                     Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             mTickTextLayout = new DynamicLayout(mTickTextSpannable, mTickLabelFgPaint,
                     (int) mBarItemWidth, Layout.Alignment.ALIGN_CENTER, 1.0f, 1.0f, false);
+        }
+    }
+
+    private void setupEdgeEffects() {
+        if (mEdgeEffectLeft == null) {
+            mEdgeEffectLeft = new EdgeEffect(getContext());
+        }
+        if (mEdgeEffectRight == null) {
+            mEdgeEffectRight = new EdgeEffect(getContext());
+        }
+        setupEdgeEffectColor();
+    }
+
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+    private void setupEdgeEffectColor() {
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.LOLLIPOP) {
+            if (mGraphAreaBgPaint != null && mEdgeEffectLeft != null && mEdgeEffectRight != null) {
+                int color = MaterialPaletteHelper.isDarkColor(
+                        mGraphAreaBgPaint.getColor()) ? Color.WHITE : Color.BLACK;
+                mEdgeEffectLeft.setColor(color);
+                mEdgeEffectRight.setColor(color);
+            }
         }
     }
 
@@ -1405,6 +1528,16 @@ public class TimelineChartView extends View {
             } else {
                 mSoundEffectMP.start();
             }
+        }
+    }
+
+    private void releaseEdgeEffects() {
+        mEdgeEffectLeftActive = mEdgeEffectRightActive = false;
+        if (mEdgeEffectLeft != null) {
+            mEdgeEffectLeft.onRelease();
+        }
+        if (mEdgeEffectRight != null) {
+            mEdgeEffectRight.onRelease();
         }
     }
 }
