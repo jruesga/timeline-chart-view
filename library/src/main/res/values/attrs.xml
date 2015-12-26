@@ -48,11 +48,16 @@
             value 0 to use system default click effect -->
         <attr name="tlcSelectionSoundEffectSource" format="reference" />
 
-        <!-- Whether animate cursor swap transition -->
-        <attr name="tlcAnimateCursorSwapTransition" format="boolean" />
+        <!-- Whether animate cursor transition -->
+        <attr name="tlcAnimateCursorTransition" format="boolean" />
 
         <!-- Whether follow real time cursor updates (live update). Only if
              scroll is in the last item -->
         <attr name="tlcFollowCursorPosition" format="boolean" />
+
+        <!-- Whether move current view to the nearest selection if, after a user
+             scroll/fling operation, the view is not centered in an item. If true move
+             view to the nearest item and selected it -->
+        <attr name="tlcAlwaysEnsureSelection" format="boolean" />
     </declare-styleable>
 </resources>

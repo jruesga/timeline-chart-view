@@ -43,11 +43,14 @@
          system default click sound effect) -->
     <integer name="tlcDefSelectionSoundEffectSource">0</integer>
 
-    <!-- Default value for animate cursor swap transition -->
-    <bool name="tlcDefAnimateCursorSwapTransition">true</bool>
+    <!-- Default value for animate cursor transition -->
+    <bool name="tlcDefAnimateCursorTransition">true</bool>
 
     <!-- Default behaviour when follow real time cursor updates -->
     <bool name="tlcDefFollowCursorPosition">false</bool>
+
+    <!-- Default behaviour to always ensure a valid selection -->
+    <bool name="tlcDefAlwaysEnsureSelection">true</bool>
 
 
     <!-- Default tick label values (for testing purposes) -->

@@ -172,12 +172,18 @@ import java.util.TimeZone;
  *         {@link #setSelectionSoundEffectSource(int)} can be used at runtime to set the
  *         resource to use as sound effect.</li><p />
  *
- *     <li><b>tlcAnimateCursorSwapTransition</b>: Whether full cursor swap are graphical animated.
- *         {@link #setAnimateCursorSwapTransition(boolean)} can be used at runtime to set
+ *     <li><b>tlcAnimateCursorTransition</b>: Whether full cursor swap are graphical animated.
+ *         {@link #setAnimateCursorTransition(boolean)} can be used at runtime to set
  *
  *     <li><b>tlcFollowCursorPosition</b>: Whether follow real time cursor updates (live update).
- *         Only if scroll is in the last item. {@link #setAnimateCursorSwapTransition(boolean)}
- *         can be used at runtime to set the behaviour of cursor swap.</li><p />
+ *         Only if scroll is in the last item. {@link #setFollowCursorPosition(boolean)}
+ *         can be used at runtime to set the behaviour on cursor updates.</li><p />
+ *
+ *     <li><b>tlcAlwaysEnsureSelection</b>: Whether move current view to the nearest selection
+ *         if, after a user scroll/fling operation, the view is not centered in an item.
+ *         If {@code true} move view to the nearest item and selected it.
+ *         {@link #setAlwaysEnsureSelection(boolean)} can be used at runtime to set the
+ *         behaviour when selection requires to be ensured.</li><p />
  * </ul>
  */
 public class TimelineChartView extends View {
@@ -353,8 +359,9 @@ public class TimelineChartView extends View {
     private int mGraphMode;
     private boolean mPlaySelectionSoundEffect;
     private int mSelectionSoundEffectSource;
-    private boolean mAnimateCursorSwapTransition;
+    private boolean mAnimateCursorTransition;
     private boolean mFollowCursorPosition;
+    private boolean mAlwaysEnsureSelection;
 
     private EdgeEffect mEdgeEffectLeft;
     private EdgeEffect mEdgeEffectRight;
@@ -522,8 +529,9 @@ public class TimelineChartView extends View {
         mGraphMode = res.getInteger(R.integer.tlcDefGraphMode);
         mPlaySelectionSoundEffect = res.getBoolean(R.bool.tlcDefPlaySelectionSoundEffect);
         mSelectionSoundEffectSource = res.getInteger(R.integer.tlcDefSelectionSoundEffectSource);
-        mAnimateCursorSwapTransition = res.getBoolean(R.bool.tlcDefAnimateCursorSwapTransition);
+        mAnimateCursorTransition = res.getBoolean(R.bool.tlcDefAnimateCursorTransition);
         mFollowCursorPosition = res.getBoolean(R.bool.tlcDefFollowCursorPosition);
+        mAlwaysEnsureSelection = res.getBoolean(R.bool.tlcDefAlwaysEnsureSelection);
 
         mGraphAreaBgPaint = new Paint();
         mGraphAreaBgPaint.setColor(graphBgColor);
@@ -555,10 +563,12 @@ public class TimelineChartView extends View {
                     mFooterBarHeight = a.getDimension(attr, mFooterBarHeight);
                 } else if (attr == R.styleable.tlcTimelineChartView_tlcGraphMode) {
                     mGraphMode = a.getInt(attr, mGraphMode);
-                } else if (attr == R.styleable.tlcTimelineChartView_tlcAnimateCursorSwapTransition) {
-                    mAnimateCursorSwapTransition = a.getBoolean(attr, mAnimateCursorSwapTransition);
+                } else if (attr == R.styleable.tlcTimelineChartView_tlcAnimateCursorTransition) {
+                    mAnimateCursorTransition = a.getBoolean(attr, mAnimateCursorTransition);
                 } else if (attr == R.styleable.tlcTimelineChartView_tlcFollowCursorPosition) {
                     mFollowCursorPosition = a.getBoolean(attr, mFollowCursorPosition);
+                } else if (attr == R.styleable.tlcTimelineChartView_tlcAlwaysEnsureSelection) {
+                    mAlwaysEnsureSelection = a.getBoolean(attr, mAlwaysEnsureSelection);
                 } else if (attr == R.styleable.tlcTimelineChartView_tlcBarItemWidth) {
                     mBarItemWidth = a.getDimension(attr, mBarItemWidth);
                 } else if (attr == R.styleable.tlcTimelineChartView_tlcBarItemSpace) {
@@ -758,15 +768,15 @@ public class TimelineChartView extends View {
     /**
      * Whether cursor swaps are animated.
      */
-    public boolean isAnimateCursorSwapTransition() {
-        return mAnimateCursorSwapTransition;
+    public boolean isAnimateCursorTransition() {
+        return mAnimateCursorTransition;
     }
 
     /**
      * Whether cursor swaps should be animated.
      */
-    public void setAnimateCursorSwapTransition(boolean animateCursorSwapTransition) {
-        mAnimateCursorSwapTransition = animateCursorSwapTransition;
+    public void setAnimateCursorTransition(boolean animateCursorTransition) {
+        mAnimateCursorTransition = animateCursorTransition;
     }
 
     /**
@@ -781,6 +791,23 @@ public class TimelineChartView extends View {
      */
     public void setFollowCursorPosition(boolean follow) {
         mFollowCursorPosition = follow;
+    }
+
+    /**
+     * Whether view will move to the nearest selection if, after a user
+     * scroll/fling operation, the view is not centered in an item.
+     */
+    public boolean isAlwaysEnsureSelection() {
+        return mAlwaysEnsureSelection;
+    }
+
+    /**
+     * Whether move current view to the nearest selection if, after a user
+     * scroll/fling operation, the view is not centered in an item. If {@code true} move
+     * view to the nearest item and selected it.
+     */
+    public void setAlwaysEnsureSelection(boolean ensureSelection) {
+        mAlwaysEnsureSelection = ensureSelection;
     }
 
     /**
@@ -1138,11 +1165,15 @@ public class TimelineChartView extends View {
             }
         }
 
-        // FIXME If we are not centered in a item, perform an scroll
 
-
-        // Determine the highlighted item and notify it to callbacks
         long timestamp = computeTimestampFromOffset(mCurrentOffset);
+
+        // If we are not centered in a item, perform an scroll
+        if (mAlwaysEnsureSelection && mState == STATE_IDLE) {
+            timestamp = computeNearestTimestampFromOffset(mCurrentOffset);
+            smoothScrollTo(timestamp);
+        }
+
         if (mCurrentTimestamp != timestamp) {
             // Don't perform selection operations while we are just scrolling
             if (mState != STATE_SCROLLING) {
@@ -1338,6 +1369,21 @@ public class TimelineChartView extends View {
             return (mBarWidth * (size - index - 1));
         }
         return -1;
+    }
+
+    private long computeNearestTimestampFromOffset(float offset) {
+        final LongSparseArray<Pair<double[], int[]>> data;
+        synchronized (mLock) {
+            data = mData;
+        }
+        int size = data.size() -1;
+        if (size < 0) {
+            return -1;
+        }
+
+        // So we are in an bar area, so we have a valid index
+        final int index = size - ((int) Math.ceil((offset - (mBarItemWidth / 2)) / mBarWidth));
+        return data.keyAt(index);
     }
 
     /** {@inheritDoc} */
@@ -1725,7 +1771,7 @@ public class TimelineChartView extends View {
     }
 
     private void reloadCursorData(boolean animate) {
-        int arg1 = mAnimateCursorSwapTransition && animate ? 1 : 0;
+        int arg1 = mAnimateCursorTransition && animate ? 1 : 0;
         Message.obtain(mBackgroundHandler, MSG_COMPUTE_DATA, arg1, 1).sendToTarget();
     }
 
