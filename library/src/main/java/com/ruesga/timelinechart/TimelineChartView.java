@@ -69,55 +69,206 @@ import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
 
+/**
+ * A view to represent data over a timeline.<p />
+ * <p />
+ * This class uses a {@link Cursor} to draw the data. All cursors must follow
+ * the following constrains:
+ * <ul>
+ *     <li>The first field must contains a timestamp, which represent
+ *         a time in the graph timeline. This value will be the key to access to
+ *         the graph information.</li>
+ *     <li>One or more float/double numeric in the rest of the fields of
+ *         the cursor. Every one of this fields will represent a serie in the
+ *         graph.</li>
+ * </ul>
+ * <p />
+ *
+ * User must call {@link #observeData(Cursor)} or {@link #observeData(Cursor, int)}
+ * to allow the view observe for data changes in the cursor. Once the view observes
+ * the cursor, any change detected in the cursor will be reflected in the graph view.
+ * The method {@link #observeData(Cursor, int)} can be used to perform optimizations around
+ * the data load process. The follow optimizations can be used.
+ * <ul>
+ *     <li><b>NO_OPTIMIZATIONS</b>. Internal data will be destroyed and recreated every
+ *         time the cursor changes. Use this value if you know that the cursor can vary its
+ *         number of fields (series to display in the graph). This will be the default
+ *         optimization by default.</li>
+ *     <li><b>NO_VARIATION_IN_SERIES_OPTIMIZATION</b>. Internal data isn't recreate, so
+ *         is safe to add, update and delete information, reducing the number of internal
+ *         references to create. Use this optimization if you know that the cursor won't
+ *         vary its number of fields (series to display in the graph).</li>
+ *     <li><b>ONLY_ADDITIONS_OPTIMIZATION</b>. Only new records are added at the end of
+ *         the cursor. This is optimized for live graphs where new records are added as
+ *         time goes. The data load process won't update, delete or add information
+ *         older than the last timestamp saw in the last iteration.</li>
+ * </ul>
+ * <p />
+ * <p />
+ *
+ * The view supports various graph mode representations that can be established via
+ * {@code tlcGraphMode} attribute or {@link #setGraphMode(int)} method.<p />
+ *
+ * The view features an autogeneration of a material-based color palette based on the
+ * background of the {@code tlcGraphBackground} attribute. User can override this
+ * color palette with its own one.<p />
+ *
+ * The view features an auto tick labeled, based on the sort of time. The minimum level
+ * displayed label is based in days, displaying hours, minutes or seconds when
+ * those amounts are detected.
+ * <p />
+ * <p />
+ *
+ * <h4>Attributes:</h4>
+ *
+ * The view has a set of custom attributes to allow configure of the view behaviour. All
+ * this attributes can be set via layout's xml attributes or setters.<p />
+ *
+ * <ul>
+ *     <li><b>tlcGraphBackground</b>: Background color of the graph area. This value
+ *         also determines the autogereated palette of colors, if no user palette was
+ *         used. {@link #setGraphAreaBackground(int)} can be used at runtime to
+ *         set this color.</li><p />
+ *
+ *     <li><b>tlcFooterBackground</b>: Background color of the footer area.
+ *         {@link #setFooterAreaBackground(int)} can be used at runtime to set this
+ *         color.</li><p />
+ *
+ *     <li><b>tlcShowFooter</b>: A boolean value indicating whether to show/hide
+ *         the footer of the graph. {@link #setShowFooter(boolean)} can be used at runtime
+ *         to show/hide the footer area.</li><p />
+ *
+ *     <li><b>tlcFooterBarHeight</b>: A float value indicating the height of footer
+ *         area of the graph. {@link #setFooterHeight(float)} can be used at runtime
+ *         to set the height the footer area.</li><p />
+ *
+ *     <li><b>tlcBarItemWidth</b>: A float value indicating the width of a bar item
+ *         of the graph. {@link #setBarItemWidth(float)} can be used at runtime
+ *         to set the width of a bar item.</li><p />
+ *
+ *     <li><b>tlcBarItemSpace</b>: A float value indicating the space between bar items.
+ *         {@link #setBarItemSpace(float)} can be used at runtime
+ *         to set the space between bar items.</li><p />
+ *
+ *     <li><b>tlcGraphMode</b>: The graph representation mode. This attribute accepts
+ *         3 modes: tlcBars (series are draw one over the other), tlcBarsStack
+ *         (series are draw one on top the other), tlcBarsSideBySide (series are
+ *         draw one beside the other). {@link #setGraphMode(int)} can be used at runtime
+ *         to set the graph mode (see {@link #GRAPH_MODE_BARS}, {@link #GRAPH_MODE_BARS_STACK}
+ *         and {@link #GRAPH_MODE_BARS_SIDE_BY_SIDE}).</li><p />
+ *
+ *     <li><b>tlcPlaySelectionSoundEffect</b>: A boolean value indicating whether play
+ *         sound effects on item selection. {@link #setPlaySelectionSoundEffect(boolean)} can be
+ *         used at runtime to set if the view should reproduce sound effects.</li><p />
+ *
+ *     <li><b>tlcSelectionSoundEffectSource</b>: A reference to a raw resource identifier
+ *         that will be play as sound effect on item selection. Define an invalid resource identifier
+ *         (value 0) to use the system default sound effect.
+ *         {@link #setSelectionSoundEffectSource(int)} can be used at runtime to set the
+ *         resource to use as sound effect.</li><p />
+ *
+ *     <li><b>tlcAnimateCursorSwapTransition</b>: Whether full cursor swap are graphical animated.
+ *         {@link #setAnimateCursorSwapTransition(boolean)} can be used at runtime to set
+ *         the behaviour of cursor swap.</li><p />
+ * </ul>
+ */
 public class TimelineChartView extends View {
 
     private static final String TAG = "TimelineChartView";
 
+    /**
+     * A class that represents a item information.
+     */
     public static class Item {
         private Item() {
         }
+
+        /**
+         * The timestamp that data belongs to.
+         */
         public long mTimestamp;
+
+        /**
+         * The values of all the series for the timestamp.
+         */
         public double[] mSeries;
     }
 
+    /**
+     * A class that represents a item event information.
+     */
     public static class ItemEvent {
         private ItemEvent() {
         }
+
+        /**
+         * The timestamp associated to the event.
+         */
         public long mTimestamp;
+
+        /**
+         * The serie associated to the event.
+         */
         public int mSerie;
     }
 
+    /**
+     * An interface definition to notify click event on items.
+     */
     public interface OnClickItemListener {
         /**
          * Called on a click event detected on a area containing an item.
          *
-         * @param item The item where the click was detected
-         * @param serie The number of the serie on which the click was detected, or -1 if
+         * @param item the item where the click was detected
+         * @param serie the number of the serie on which the click was detected, or -1 if
          *              it happened on a shared area of the item (xe: the tick label area).
          */
         void onClickItem(Item item, int serie);
     }
 
+    /**
+     * An interface definition to notify long click event on items.
+     */
     public interface OnLongClickItemListener {
         /**
          * Called on a long click event detected on a area containing an item.
          *
-         * @param item The item where the long click was detected
-         * @param serie The number of the serie on which the long click was detected, or -1 if
+         * @param item the item where the long click was detected
+         * @param serie the number of the serie on which the long click was detected, or -1 if
          *              it happened on a shared area of the item (xe: the tick label area).
          */
         void onLongClickItem(Item item, int serie);
     }
 
+    /**
+     * An interface definition to notify item selection event.
+     */
     public interface OnSelectedItemChangedListener {
+        /**
+         * Called when a item was selected.
+         *
+         * @param selectedItem information about the selected item
+         * @param fromUser whether the event came from a user iteration.
+         */
         void onSelectedItemChanged(Item selectedItem, boolean fromUser);
+
+        /**
+         * Called when there is no selection.
+         */
         void onNothingSelected();
     }
 
+    /**
+     * An interface definition to notify changes in the color palette.
+     */
     public interface OnColorPaletteChangedListener {
+        /**
+         * Called when the color palette changed.
+         *
+         * @param palette the new color palette.
+         */
         void onColorPaletteChanged(int[] palette);
     }
-
 
     private class LongPressDetector implements Runnable {
         boolean mLongPressTriggered;
@@ -129,10 +280,33 @@ public class TimelineChartView extends View {
         }
     }
 
-    // Bar item mode constants
+    /** Constant to define the graph mode to normal bars (series are draw one over the other).*/
     public static final int GRAPH_MODE_BARS = 0;
+    /** Constant to define the graph mode to stacked bars (series are draw one on top the other).*/
     public static final int GRAPH_MODE_BARS_STACK = 1;
+    /** Constant to define the graph mode to beside bars (series are draw one beside the other).*/
     public static final int GRAPH_MODE_BARS_SIDE_BY_SIDE = 2;
+
+    /**
+     * Internal data will be destroyed and recreated every time the cursor changes. Use this
+     * value if you know that the cursor can vary its number of fields (series to display in
+     * the graph).
+     */
+    public static final int NO_OPTIMIZATIONS = 0;
+    /**
+     * Internal data isn't recreate, so is safe to add, update and delete information,
+     * reducing the number of internal references to create. Use this optimization if
+     * you know that the cursor won't vary its number of fields (series to display in
+     * the graph).
+     */
+    public static final int NO_VARIATION_IN_SERIES_OPTIMIZATION = 1;
+    /**
+     * Only new records are added at the end of the cursor. This is optimized for live
+     * graphs where new records are added as time goes. The data load process won't update,
+     * delete or add information older than the last timestamp saw in the last iteration.
+     */
+    public static final int ONLY_ADDITIONS_OPTIMIZATION = 2;
+
 
     private static final float MAX_ZOOM_OUT = 4.0f;
     private static final float MIN_ZOOM_OUT = 1.0f;
@@ -275,19 +449,22 @@ public class TimelineChartView extends View {
     private final Object mLock = new Object();
 
 
-
+    /** {@inheritDoc} */
     public TimelineChartView(Context ctx) {
         this(ctx, null, 0, 0);
     }
 
+    /** {@inheritDoc} */
     public TimelineChartView(Context ctx, AttributeSet attrs) {
         this(ctx, attrs, 0, 0);
     }
 
+    /** {@inheritDoc} */
     public TimelineChartView(Context ctx, AttributeSet attrs, int defStyleAttr) {
         this(ctx, attrs, defStyleAttr, 0);
     }
 
+    /** {@inheritDoc} */
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     public TimelineChartView(Context ctx, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
         super(ctx, attrs, defStyleAttr, defStyleRes);
@@ -379,12 +556,14 @@ public class TimelineChartView extends View {
         computeBoundAreas();
     }
 
+    /** {@inheritDoc} */
     @Override
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
         setupBackgroundHandler();
     }
 
+    /** {@inheritDoc} */
     @Override
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
@@ -407,11 +586,15 @@ public class TimelineChartView extends View {
         mVelocityTracker = null;
     }
 
+    /** {@inheritDoc} */
     @Override
     protected void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
     }
 
+    /**
+     * Set the color of the background of the graph area.
+     */
     public void setGraphAreaBackground(int color) {
         if (mGraphAreaBgPaint.getColor() != color) {
             mGraphAreaBgPaint.setColor(color);
@@ -421,10 +604,16 @@ public class TimelineChartView extends View {
         }
     }
 
+    /**
+     * Whether the footer is shown.
+     */
     public boolean isShowFooter() {
         return mShowFooter;
     }
 
+    /**
+     * Whether the footer will be shown.
+     */
     public void setShowFooter(boolean show) {
         if (mShowFooter != show) {
             mShowFooter = show;
@@ -434,6 +623,9 @@ public class TimelineChartView extends View {
         }
     }
 
+    /**
+     * Set the color of the background of the footer area.
+     */
     public void setFooterAreaBackground(int color) {
         if (mFooterAreaBgPaint.getColor() != color) {
             mFooterAreaBgPaint.setColor(color);
@@ -443,10 +635,16 @@ public class TimelineChartView extends View {
         }
     }
 
+    /**
+     * Returns the height in pixels of the footer area.
+     */
     public float getFooterBarHeight() {
         return mFooterBarHeight;
     }
 
+    /**
+     * Sets the height in pixels of the footer area.
+     */
     public void setFooterHeight(float height) {
         if (mFooterBarHeight != height) {
             mFooterBarHeight = height;
@@ -457,10 +655,16 @@ public class TimelineChartView extends View {
         }
     }
 
+    /**
+     * Returns the space in pixels between bar items.
+     */
     public float getBarItemSpace() {
         return mBarItemSpace;
     }
 
+    /**
+     * Sets the space in pixels between bar items.
+     */
     public void setBarItemSpace(float barItemSpace) {
         if (mBarItemSpace != barItemSpace) {
             mBarItemSpace = barItemSpace;
@@ -469,10 +673,16 @@ public class TimelineChartView extends View {
         }
     }
 
+    /**
+     * Returns the width in pixels of a bar item.
+     */
     public float getBarItemWidth() {
         return mBarItemWidth;
     }
 
+    /**
+     * Sets the width in pixels of a bar item.
+     */
     public void setBarItemWidth(float barItemWidth) {
         if (mBarItemWidth != barItemWidth) {
             mBarItemWidth = barItemWidth;
@@ -481,10 +691,22 @@ public class TimelineChartView extends View {
         }
     }
 
+    /**
+     * Returns the graph mode representation.
+     * @see {@link #GRAPH_MODE_BARS}
+     * @see {@link #GRAPH_MODE_BARS_STACK}
+     * @see {@link #GRAPH_MODE_BARS_SIDE_BY_SIDE}
+     */
     public int getGraphMode() {
         return mGraphMode;
     }
 
+    /**
+     * Sets the graph mode representation.
+     * @see {@link #GRAPH_MODE_BARS}
+     * @see {@link #GRAPH_MODE_BARS_STACK}
+     * @see {@link #GRAPH_MODE_BARS_SIDE_BY_SIDE}
+     */
     public void setGraphMode(int mode) {
         if (mode != mGraphMode) {
             mGraphMode = mode;
@@ -492,18 +714,30 @@ public class TimelineChartView extends View {
         }
     }
 
+    /**
+     * Whether cursor swaps are animated.
+     */
     public boolean isAnimateCursorSwapTransition() {
         return mAnimateCursorSwapTransition;
     }
 
+    /**
+     * Whether cursor swaps should be animated.
+     */
     public void setAnimateCursorSwapTransition(boolean animateCursorSwapTransition) {
         mAnimateCursorSwapTransition = animateCursorSwapTransition;
     }
 
+    /**
+     * Returns the user color palette.
+     */
     public int[] getUserPalette() {
         return mUserPalette;
     }
 
+    /**
+     * Sets the user color palette.
+     */
     public void setUserPalette(int[] userPalette) {
         if (!Arrays.equals(mUserPalette, userPalette)) {
             mUserPalette = userPalette;
@@ -512,61 +746,142 @@ public class TimelineChartView extends View {
         }
     }
 
+    /**
+     * Returns the current color palette (it could be a combination of the user
+     * palette and the generated one).
+     * @see {@link #setUserPalette(int[])}
+     */
     public int[] getCurrentPalette() {
         return mCurrentPalette;
     }
 
+    /**
+     * Whether play a sound effect on item selection.
+     */
     public boolean isPlaySelectionSoundEffect() {
         return mPlaySelectionSoundEffect;
     }
 
+    /**
+     * Whether should play a sound effect on item selection.
+     */
     public void setPlaySelectionSoundEffect(boolean value) {
         mPlaySelectionSoundEffect = value;
         setupSoundEffects();
     }
 
+    /**
+     * Returns the raw resource identifier used to play a sound effect
+     * on item selection, or {@code 0} if default system effect is used.
+     */
     public int getSelectionSoundEffectSource() {
         return mSelectionSoundEffectSource;
     }
 
+    /**
+     * Sets the raw resource identifier to use to play a sound effect
+     * on item selection. Use {@code 0} to use the default system effect.
+     */
     public void setSelectionSoundEffectSource(@RawRes int source) {
         this.mSelectionSoundEffectSource = source;
         setupSoundEffects();
     }
 
+    /**
+     * Returns the callback which listen for click events on items.
+     * @see {@link com.ruesga.timelinechart.TimelineChartView.OnClickItemListener}
+     */
     public OnClickItemListener getOnClickItemListener() {
         return mOnClickItemCallback;
     }
 
+    /**
+     * Returns the callback which will listen for click events on items.
+     * @see {@link com.ruesga.timelinechart.TimelineChartView.OnClickItemListener}
+     */
     public void setOnClickItemListener(OnClickItemListener cb) {
         mOnClickItemCallback = cb;
     }
 
+    /**
+     * Returns the callback which listen for long click events on items.
+     * @see {@link com.ruesga.timelinechart.TimelineChartView.OnLongClickItemListener}
+     */
     public OnLongClickItemListener getOnLongClickItemListener() {
         return mOnLongClickItemCallback;
     }
 
+    /**
+     * Sets the callback which will listen for click events on items.
+     * @see {@link com.ruesga.timelinechart.TimelineChartView.OnLongClickItemListener}
+     */
     public void setOnLongClickItemListener(OnLongClickItemListener cb) {
         mOnLongClickItemCallback = cb;
     }
 
+    /**
+     * Register the callback as a listener to start receiving item selection changes.
+     * @see {@link com.ruesga.timelinechart.TimelineChartView.OnSelectedItemChangedListener}
+     */
     public void addOnSelectedItemChangedListener(OnSelectedItemChangedListener cb) {
         mOnSelectedItemChangedCallbacks.add(cb);
     }
 
+    /**
+     * Unregister the callback as a listener to stop receiving item selection changes.
+     * @see {@link com.ruesga.timelinechart.TimelineChartView.OnSelectedItemChangedListener}
+     */
     public void removeOnSelectedItemChangedListener(OnSelectedItemChangedListener cb) {
         mOnSelectedItemChangedCallbacks.remove(cb);
     }
 
+    /**
+     * Register the callback as a listener to start receiving color palette changes.
+     * @see {@link com.ruesga.timelinechart.TimelineChartView.OnColorPaletteChangedListener}
+     */
     public void addOnColorPaletteChangedListener(OnColorPaletteChangedListener cb) {
         mOnColorPaletteChangedCallbacks.add(cb);
     }
 
+    /**
+     * Unregister the callback as a listener to stop receiving color palette changes.
+     * @see {@link com.ruesga.timelinechart.TimelineChartView.OnColorPaletteChangedListener}
+     */
     public void removeOnColorPaletteChangedListener(OnColorPaletteChangedListener cb) {
         mOnColorPaletteChangedCallbacks.remove(cb);
     }
 
+    /**
+     * Registers the cursor and start observing changes on it. This method won't perform
+     * any sort of optimization in the data processing.
+     * @see {@link #observeData(Cursor, int)}
+     * @see {@link #NO_OPTIMIZATIONS}
+     */
     public void observeData(Cursor c) {
+        observeData(c, NO_OPTIMIZATIONS);
+    }
+
+    /**
+     * Registers the cursor and start observing changes on it.
+     *
+     * The cursor <i>MUST</i> follow the next constrains:
+     * <ul>
+     *     <li>The first field must contains a timestamp, which represent
+     *         a time in the graph timeline. This value will be the key to access to
+     *         the graph information.</li>
+     *     <li>One or more float/double numeric in the rest of the fields of
+     *         the cursor. Every one of this fields will represent a serie in the
+     *         graph.</li>
+     * </ul>
+     *
+     * @param c the cursor to observe.
+     * @param flag An optimization flag. See optimization constants for a description of
+     *             what every optimizion does.
+     * @see {@link #NO_OPTIMIZATIONS}
+     * @see {@link #NO_VARIATION_IN_SERIES_OPTIMIZATION}
+     * @see {@link #ONLY_ADDITIONS_OPTIMIZATION}
+     */
+    public void observeData(Cursor c, int flag) {
         checkCursorIntegrity(c);
 
         // Close previous cursor
@@ -593,6 +908,7 @@ public class TimelineChartView extends View {
         });
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean onTouchEvent(final MotionEvent event) {
         // Ignore events while performing scrolling animation
@@ -716,6 +1032,7 @@ public class TimelineChartView extends View {
         }
     }
 
+    /** {@inheritDoc} */
     @Override
     public void computeScroll() {
         super.computeScroll();
@@ -787,6 +1104,7 @@ public class TimelineChartView extends View {
         }
     }
 
+    /** {@inheritDoc} */
     @Override
     public void setOverScrollMode(int overScrollMode) {
         if(overScrollMode != OVER_SCROLL_NEVER) {
@@ -798,6 +1116,10 @@ public class TimelineChartView extends View {
         super.setOverScrollMode(overScrollMode);
     }
 
+    /**
+     * Move the current viewport of this view to the timestamp passed as argument. If
+     * timestamp doesn't exists no operation will be performed.
+     */
     public void scrollTo(long timestamp) {
         // Ignore any scroll while performing scrolling animation
         if (mState == STATE_ZOOMING) {
@@ -811,6 +1133,11 @@ public class TimelineChartView extends View {
         }
     }
 
+    /**
+     * Performs a smooth transition of the current viewport of this view to
+     * the timestamp passed as argument. If timestamp doesn't exists no
+     * operation will be performed.
+     */
     public void smoothScrollTo(long timestamp) {
         // Ignore any scroll while performing scrolling animation
         if (mState == STATE_ZOOMING) {
@@ -955,6 +1282,7 @@ public class TimelineChartView extends View {
         return -1;
     }
 
+    /** {@inheritDoc} */
     @Override
     protected void onDraw(Canvas c) {
         // 1.- Clip to padding
@@ -1129,6 +1457,7 @@ public class TimelineChartView extends View {
         }
     }
 
+    /** {@inheritDoc} */
     @Override
     protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
         super.onLayout(changed, left, top, right, bottom);

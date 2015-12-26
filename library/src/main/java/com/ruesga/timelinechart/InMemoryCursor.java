@@ -28,7 +28,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * An in-memory cursor implementation.
+ * An in-memory {@link Cursor} implementation.
  */
 public class InMemoryCursor implements Cursor {
 
@@ -44,11 +44,21 @@ public class InMemoryCursor implements Cursor {
     private Uri mNotificationUri;
     private Bundle mExtras = new Bundle();
 
+    /**
+     * Creates a new cursor setting the columns names that will be used by this cursor. The
+     * length of this array determines the number of columns that the cursor can handle.
+     * Filling that below this number will set the rest of the values to null, and all
+     * items above it will be ignored.
+     * @param columnNames the columns names of this cursor.
+     */
     public InMemoryCursor(String[] columnNames) {
         mCurrentPosition = -1;
         mColumnNames = columnNames;
     }
 
+    /**
+     * Adds all the {@link List} as new rows of the cursor.
+     */
     public void addAll(List<Object[]> data) {
         for (Object[] fields : data) {
             internalAdd(fields);
@@ -56,6 +66,9 @@ public class InMemoryCursor implements Cursor {
         notifyObservers();
     }
 
+    /**
+     * Adds a new row to the cursor.
+     */
     public void add(Object[] data) {
         internalAdd(data);
         notifyObservers();
@@ -73,6 +86,10 @@ public class InMemoryCursor implements Cursor {
         }
     }
 
+    /**
+     * Update the cursor with the given data at the position passed as argument.
+     * @return if the row was found and updated.
+     */
     public boolean update(int position, Object[] data) {
         if (position >= 0 && position < mRecords.size()){
             Record record =  mRecords.get(position);
@@ -84,6 +101,10 @@ public class InMemoryCursor implements Cursor {
         return false;
     }
 
+    /**
+     * Remove the row at the passed position from the cursor if exists.
+     * @return if the row was found and deleted.
+     */
     public boolean remove(int position) {
         if (position >= 0 && position < mRecords.size()){
             mRecords.remove(position);
@@ -98,16 +119,19 @@ public class InMemoryCursor implements Cursor {
         return false;
     }
 
+    /** {@inheritDoc} */
     @Override
     public int getCount() {
         return mRecords.size();
     }
 
+    /** {@inheritDoc} */
     @Override
     public int getPosition() {
         return mCurrentPosition;
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean move(int offset) {
         if (mCurrentPosition + offset >= mRecords.size()) {
@@ -117,6 +141,7 @@ public class InMemoryCursor implements Cursor {
         return true;
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean moveToPosition(int position) {
         if (position >= mRecords.size()) {
@@ -126,6 +151,7 @@ public class InMemoryCursor implements Cursor {
         return true;
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean moveToFirst() {
         if (mRecords.size() == 0) {
@@ -135,6 +161,7 @@ public class InMemoryCursor implements Cursor {
         return true;
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean moveToLast() {
         if (mRecords.size() == 0) {
@@ -144,36 +171,43 @@ public class InMemoryCursor implements Cursor {
         return true;
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean moveToNext() {
         return move(1);
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean moveToPrevious() {
         return move(-1);
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean isFirst() {
         return mCurrentPosition == 0;
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean isLast() {
         return mCurrentPosition == (mRecords.size() - 1);
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean isBeforeFirst() {
         return mCurrentPosition < 0;
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean isAfterLast() {
         return mCurrentPosition >= mRecords.size();
     }
 
+    /** {@inheritDoc} */
     @Override
     public int getColumnIndex(String columnName) {
         int i = 0;
@@ -186,6 +220,7 @@ public class InMemoryCursor implements Cursor {
         return -1;
     }
 
+    /** {@inheritDoc} */
     @Override
     public int getColumnIndexOrThrow(String columnName) throws IllegalArgumentException {
         int columnIndex = getColumnIndex(columnName);
@@ -195,6 +230,7 @@ public class InMemoryCursor implements Cursor {
         return columnIndex;
     }
 
+    /** {@inheritDoc} */
     @Override
     public String getColumnName(int columnIndex) {
         return mColumnNames[columnIndex];
@@ -205,11 +241,13 @@ public class InMemoryCursor implements Cursor {
         return mColumnNames;
     }
 
+    /** {@inheritDoc} */
     @Override
     public int getColumnCount() {
         return mColumnNames.length;
     }
 
+    /** {@inheritDoc} */
     @Override
     public byte[] getBlob(int columnIndex) {
         if (isNull(columnIndex)) {
@@ -218,6 +256,7 @@ public class InMemoryCursor implements Cursor {
         return (byte[]) mRecords.get(mCurrentPosition).mFields[columnIndex];
     }
 
+    /** {@inheritDoc} */
     @Override
     public String getString(int columnIndex) {
         if (isNull(columnIndex)) {
@@ -227,6 +266,7 @@ public class InMemoryCursor implements Cursor {
         return String.valueOf(o);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void copyStringToBuffer(int columnIndex, CharArrayBuffer buffer) {
         final Object o = mRecords.get(mCurrentPosition).mFields[columnIndex];
@@ -249,32 +289,38 @@ public class InMemoryCursor implements Cursor {
         }
     }
 
+    /** {@inheritDoc} */
     @Override
     public short getShort(int columnIndex) {
         return (short) getDouble(columnIndex);
     }
 
+    /** {@inheritDoc} */
     @Override
     public int getInt(int columnIndex) {
         return (int) getDouble(columnIndex);
     }
 
+    /** {@inheritDoc} */
     @Override
     public long getLong(int columnIndex) {
         return (long) getDouble(columnIndex);
     }
 
+    /** {@inheritDoc} */
     @Override
     public float getFloat(int columnIndex) {
         return (float) getDouble(columnIndex);
     }
 
+    /** {@inheritDoc} */
     @Override
     public double getDouble(int columnIndex) {
         final Object o = mRecords.get(mCurrentPosition).mFields[columnIndex];
         return Double.parseDouble(String.valueOf(o));
     }
 
+    /** {@inheritDoc} */
     @Override
     public int getType(int columnIndex) {
         final Object o = mRecords.get(mCurrentPosition).mFields[columnIndex];
@@ -293,76 +339,91 @@ public class InMemoryCursor implements Cursor {
         return Cursor.FIELD_TYPE_STRING;
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean isNull(int columnIndex) {
         return mRecords.get(mCurrentPosition).mFields[columnIndex] == null;
     }
 
+    /** {@inheritDoc} */
     @Override
     public void deactivate() {
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean requery() {
         return true;
     }
 
+    /** {@inheritDoc} */
     @Override
     public void close() {
         mRecords.clear();
         mCurrentPosition = -1;
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean isClosed() {
         return mCurrentPosition == -1;
     }
 
+    /** {@inheritDoc} */
     @Override
     public void registerContentObserver(ContentObserver observer) {
         throw new UnsupportedOperationException();
     }
 
+    /** {@inheritDoc} */
     @Override
     public void unregisterContentObserver(ContentObserver observer) {
         throw new UnsupportedOperationException();
     }
 
+    /** {@inheritDoc} */
     @Override
     public void registerDataSetObserver(DataSetObserver observer) {
         mObservers.add(observer);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void unregisterDataSetObserver(DataSetObserver observer) {
         mObservers.remove(observer);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void setNotificationUri(ContentResolver cr, Uri uri) {
         mNotificationUri = uri;
     }
 
+    /** {@inheritDoc} */
     @Override
     public Uri getNotificationUri() {
         return mNotificationUri;
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean getWantsAllOnMoveCalls() {
         return false;
     }
 
+    /** {@inheritDoc} */
     @Override
     public void setExtras(Bundle extras) {
         mExtras.putAll(extras);
     }
 
+    /** {@inheritDoc} */
     @Override
     public Bundle getExtras() {
         return mExtras;
     }
 
+    /** {@inheritDoc} */
     @Override
     public Bundle respond(Bundle extras) {
         return extras;
