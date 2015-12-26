@@ -30,7 +30,7 @@ repositories {
 }
 
 dependencies {
-    compile 'com.ruesga.timeline-chart-view:timeline-chart-view:1.0.0'
+    compile 'com.ruesga.timeline-chart-view:timeline-chart-view:0.0.1'
 }
 ```
 
@@ -92,6 +92,11 @@ You can configure the some of the behaviour at xml style or at runtime. In addit
 
 **tlcAlwaysEnsureSelection**: Whether move current view to the nearest selection if, after a user scroll/fling operation, the view is not centered in an item. If **true** move view to the nearest item and selected it. **#setAlwaysEnsureSelection(boolean)** can be used at runtime to set the behaviour when selection requires to be ensured.
 
+
+
+### Want to contribute?
+
+Just file new issues and features or send pull requests.
 
 
 ### License
