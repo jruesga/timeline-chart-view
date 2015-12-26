@@ -48,7 +48,9 @@ import android.text.Spanned;
 import android.text.TextPaint;
 import android.text.style.AbsoluteSizeSpan;
 import android.util.AttributeSet;
+import android.util.DisplayMetrics;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.MotionEvent;
 import android.view.SoundEffectConstants;
 import android.view.VelocityTracker;
@@ -1656,7 +1658,12 @@ public class TimelineChartView extends View {
         synchronized (mLock) {
             mTickCalendar = Calendar.getInstance(TimeZone.getDefault(), Locale.getDefault());
             final float textSizeFactor = mFooterBarHeight / mDefFooterBarHeight;
-            mTickLabelFgPaint.setTextSize((int) (36 * textSizeFactor));
+            final DisplayMetrics dp = getResources().getDisplayMetrics();
+            final float size8 = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 8, dp);
+            final float size12 = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 12, dp);
+            final float size20 = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 20, dp);
+
+            mTickLabelFgPaint.setTextSize((int) (size8 * textSizeFactor));
 
             final String[] formats = getResources().getStringArray(R.array.tlcDefTickLabelFormats);
             final String[] values = getResources().getStringArray(R.array.tlcDefTickLabelValues);
@@ -1676,10 +1683,11 @@ public class TimelineChartView extends View {
                 mTickTextSpannables[i] = new DynamicSpannableString(mTickText);
                 if (i == (count - 1)) {
                     mTickTextSpannables[i].setSpan(new AbsoluteSizeSpan(
-                            (int) (56 * textSizeFactor)), 0, 2, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                            (int) (size20 * textSizeFactor)), 0, 2,
+                            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 } else if (i == 1) {
                     mTickTextSpannables[i].setSpan(new AbsoluteSizeSpan(
-                            (int) (48 * textSizeFactor)), 0, text.length(),
+                            (int) (size12 * textSizeFactor)), 0, text.length(),
                             Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 }
                 mTickTextLayouts[i] = new DynamicLayout(mTickTextSpannables[i], mTickLabelFgPaint,

@@ -289,8 +289,6 @@ public class SampleActivity extends AppCompatActivity {
                 return false;
             }
         });
-        mGraph.setAlwaysEnsureSelection(true);
-
         mGraph.observeData(mCursor);
     }
 
