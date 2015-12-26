@@ -338,9 +338,7 @@ public class TimelineChartView extends View {
     private int mSeriesSwap;
     private LongSparseArray<Pair<double[],int[]>> mDataSwap = new LongSparseArray<>();
     private double mMaxValueSwap;
-    private float mLastOffsetSwap;
     private float mMaxOffsetSwap;
-    private long mCurrentTimestampSwap;
     private boolean mTickHasDayFormatSwap;
 
     private final RectF mViewArea = new RectF();
@@ -1292,7 +1290,7 @@ public class TimelineChartView extends View {
             data = mData;
         }
         int size = data.size() -1;
-        if (size <= 0) {
+        if (size < 0) {
             return -1;
         }
 
@@ -1837,9 +1835,7 @@ public class TimelineChartView extends View {
                 mSeriesSwap = series;
                 mDataSwap = data;
                 mMaxValueSwap = max;
-                mLastOffsetSwap = -1.f;
                 mMaxOffsetSwap = maxOffset;
-                mCurrentTimestampSwap = -2;
                 mTickHasDayFormatSwap = hasDayFormat;
             }
         } else {
@@ -1936,9 +1932,19 @@ public class TimelineChartView extends View {
             mSeries = mSeriesSwap;
             mData = mDataSwap;
             mMaxValue = mMaxValueSwap;
-            mLastOffset = mLastOffsetSwap;
+            mLastOffset = -1.f;
             mMaxOffset = mMaxOffsetSwap;
-            mCurrentTimestamp = mCurrentTimestampSwap;
+
+            // Compute current offset and timestamp
+            boolean haveTimestamp = mData.indexOfKey(mCurrentTimestamp) >= 0;
+            if (haveTimestamp) {
+                mCurrentOffset = computeOffsetForTimestamp(mCurrentTimestamp);
+            } else {
+                mCurrentOffset = 0;
+                mCurrentTimestamp = -2;
+            }
+
+            // Setup tick labels if we detected changes
             if (mTickHasDayFormat != mTickHasDayFormatSwap) {
                 mTickHasDayFormat = mTickHasDayFormatSwap;
                 setupTickLabels();
@@ -1949,7 +1955,6 @@ public class TimelineChartView extends View {
     private void clearSwapRefs() {
         mDataSwap.clear();
         mMaxValueSwap = 0d;
-        mCurrentTimestamp = -1;
         mTickHasDayFormatSwap = false;
     }
 
