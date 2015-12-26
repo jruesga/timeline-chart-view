@@ -119,6 +119,17 @@ public class InMemoryCursor implements Cursor {
         return false;
     }
 
+    /**
+     * Clear the internal cursor data.
+     */
+    public void removeAll() {
+        if (mRecords.size() >= 0) {
+            mRecords.clear();
+            mCurrentPosition = -1;
+            notifyObservers();
+        }
+    }
+
     /** {@inheritDoc} */
     @Override
     public int getCount() {
