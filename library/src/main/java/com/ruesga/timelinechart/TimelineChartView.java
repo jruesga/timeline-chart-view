@@ -2042,7 +2042,7 @@ public class TimelineChartView extends View {
     private int getTickLabelFormat(long timestamp) {
         mTickCalendar.setTimeInMillis(timestamp);
         final int hour = mTickCalendar.get(Calendar.HOUR_OF_DAY);
-        final int minute = mTickCalendar.get(Calendar.MILLISECOND);
+        final int minute = mTickCalendar.get(Calendar.MINUTE);
         final int second = mTickCalendar.get(Calendar.SECOND);
         final int millisecond = mTickCalendar.get(Calendar.MILLISECOND);
         if (hour == 0 && minute == 0 && second == 0 && millisecond == 0) {
