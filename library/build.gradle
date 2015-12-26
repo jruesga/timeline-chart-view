@@ -2,7 +2,7 @@ apply plugin: 'com.android.library'
 
 android {
     dependencies {
-        compile 'com.android.support:support-v4:' + rootProject.subprojects.ext.supportVersion
+        compile 'com.android.support:support-v4:' + ((String) rootProject.subprojects.ext.supportVersion)
     }
 
     defaultConfig {
@@ -10,17 +10,58 @@ android {
         consumerProguardFiles file('proguard.txt')
     }
 
-    buildTypes {
-        release {
-            libraryVariants.all { variant ->
-                variant.outputs.each { output ->
-                    def out = output.outputFile;
-                    output.outputFile = new File(
-                            (String) out.parent,
-                            (String) "timeline-chart-view-" + defaultConfig.versionName + ".apk"
-                    )
-                }
-            }
+    libraryVariants.all { variant ->
+        def variantName = variant.baseName.capitalize()
+        def javadocDir = new File(project.buildDir, "docs/javadocs/")
+        def outDir = new File(project.buildDir, "out/${variant.name}/")
+
+        variant.outputs.each { output ->
+            output.outputFile = new File(outDir, "timeline-chart-view-" + ((String) defaultConfig.versionName) + ".apk")
+        }
+
+        //noinspection GroovyAssignabilityCheck
+        task "javadoc${variantName}" (type: Javadoc, dependsOn: "compile${variantName}Sources") {
+            source = android.sourceSets.main.java.srcDirs
+            def variantCompiledClassesDir = file("${buildDir}/intermediates/classes/${variant.dirName}/")
+            classpath = files(
+                    variant.javaCompile.classpath,
+                    variantCompiledClassesDir,
+                    android.bootClasspath
+            )
+            destinationDir = new File(javadocDir, (String) variant.name)
+
+            options.author(true)
+            options.version(true)
+            options.use(true)
+            options.setMemberLevel(JavadocMemberLevel.PUBLIC)
+            options.links("http://docs.oracle.com/javase/7/docs/api/");
+            options.links("http://developer.android.com/reference/");
+
+            exclude '**/BuildConfig.java'
+            exclude '**/R.java'
+            exclude '**/helpers/*.java'
+            failOnError false
+        }
+
+        //noinspection GroovyAssignabilityCheck
+        task "javadoc${variantName}Jar"(type: Jar, dependsOn: "javadoc${variantName}") {
+            classifier = 'javadoc'
+            from new File(javadocDir, (String) variant.name)
+            archiveName = "timeline-chart-view-" + ((String) defaultConfig.versionName) + "-javadoc.jar"
+            destinationDir = outDir
+        }
+
+        //noinspection GroovyAssignabilityCheck
+        task "sources${variantName}Jar"(type: Jar, dependsOn: "compile${variantName}Sources") {
+            classifier = 'sources'
+            //noinspection GroovyAssignabilityCheck
+            from android.sourceSets.main.java.srcDirs
+            archiveName = "timeline-chart-view-" + ((String) defaultConfig.versionName) + "-sources.jar"
+            destinationDir = outDir
+        }
+
+        //noinspection GroovyAssignabilityCheck
+        task "all${variantName}"(type: Jar, dependsOn: ["assemble${variantName}" ,"sources${variantName}Jar", "javadoc${variantName}Jar"]) {
         }
     }
 }

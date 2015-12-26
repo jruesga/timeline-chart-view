@@ -1,9 +1,9 @@
 apply plugin: 'com.android.application'
 
 dependencies {
-    compile 'com.android.support:support-v4:' + rootProject.subprojects.ext.supportVersion
-    compile 'com.android.support:appcompat-v7:' + rootProject.subprojects.ext.supportVersion
-    compile 'com.android.support:design:' + rootProject.subprojects.ext.supportVersion
+    compile 'com.android.support:support-v4:' + ((String) rootProject.subprojects.ext.supportVersion)
+    compile 'com.android.support:appcompat-v7:' + ((String) rootProject.subprojects.ext.supportVersion)
+    compile 'com.android.support:design:' + ((String) rootProject.subprojects.ext.supportVersion)
     compile 'com.github.ismaeltoe:flowlayout:1.0'
     compile project(':library')
 }
