@@ -1612,6 +1612,10 @@ public class TimelineChartView extends View {
                 if (i == (count - 1)) {
                     mTickTextSpannables[i].setSpan(new AbsoluteSizeSpan(
                             (int) (56 * textSizeFactor)), 0, 2, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                } else if (i == 1) {
+                    mTickTextSpannables[i].setSpan(new AbsoluteSizeSpan(
+                            (int) (48 * textSizeFactor)), 0, text.length(),
+                            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 }
                 mTickTextLayouts[i] = new DynamicLayout(mTickTextSpannables[i], mTickLabelFgPaint,
                         (int) mBarItemWidth, Layout.Alignment.ALIGN_CENTER, 1.0f, 1.0f, false);
@@ -1769,6 +1773,7 @@ public class TimelineChartView extends View {
             }
 
             // Extract the data from the cursor applying the current optimization flag.
+            int lastTickLabelFormat = -1;
             do {
                 long timestamp = mCursor.getLong(0);
                 if (timestamp == lastTimestamp
@@ -1776,9 +1781,14 @@ public class TimelineChartView extends View {
                     break;
                 }
 
-                if (getTickLabelFormat(timestamp) == TICK_LABEL_DAY_FORMAT) {
+                // Determine the best tick vertical alignment
+                final int tickLabelFormat = getTickLabelFormat(timestamp);
+                if (tickLabelFormat == TICK_LABEL_DAY_FORMAT ||
+                        (lastTickLabelFormat != -1 && lastTickLabelFormat != tickLabelFormat)) {
                     hasDayFormat = true;
                 }
+                lastTickLabelFormat = tickLabelFormat;
+
                 final double[] seriesData;
                 final int[] indexes;
                 if (mOptimizationFlag == NO_OPTIMIZATION) {
