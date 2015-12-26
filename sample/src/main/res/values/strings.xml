@@ -20,6 +20,7 @@
     <string name="color">Color</string>
     <string name="sound">Sound</string>
     <string name="reload">Reload</string>
+    <string name="live_update">Live Update</string>
     <string name="add">Add</string>
     <string name="delete">Delete</string>
     <string name="update">Update</string>

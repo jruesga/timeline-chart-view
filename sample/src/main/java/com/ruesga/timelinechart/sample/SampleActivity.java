@@ -17,6 +17,8 @@ package com.ruesga.timelinechart.sample;
 
 import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
@@ -68,6 +70,18 @@ public class SampleActivity extends AppCompatActivity {
             "GRAPH_MODE_BARS_SIDE_BY_SIDE"};
     private int mMode;
     private int mSound;
+    private boolean mInLiveUpdate;
+
+    private static final int LIVE_UPDATE_INTERVAL = 2;
+    private Handler mHandler;
+    private final Runnable mLiveUpdateTask = new Runnable() {
+        @Override
+        public void run() {
+            mStart.add(Calendar.SECOND, LIVE_UPDATE_INTERVAL);
+            mCursor.add(createItem(mStart.getTimeInMillis()));
+            mHandler.postDelayed(this, LIVE_UPDATE_INTERVAL * 1000);
+        }
+    };
 
     private final View.OnClickListener mClickListener = new View.OnClickListener() {
         @Override
@@ -109,6 +123,17 @@ public class SampleActivity extends AppCompatActivity {
                     mCursor = createRandomData();
                     mGraph.observeData(mCursor);
                     break;
+                case R.id.live_update:
+                    mHandler.removeCallbacks(mLiveUpdateTask);
+                    if (!mInLiveUpdate) {
+                        mHandler.postDelayed(mLiveUpdateTask, LIVE_UPDATE_INTERVAL * 1000);
+                    }
+                    mInLiveUpdate = !mInLiveUpdate;
+                    findViewById(R.id.reload).setEnabled(!mInLiveUpdate);
+                    findViewById(R.id.add).setEnabled(!mInLiveUpdate);
+                    findViewById(R.id.update).setEnabled(!mInLiveUpdate);
+                    findViewById(R.id.delete).setEnabled(!mInLiveUpdate);
+                    break;
                 case R.id.add:
                     mStart.add(Calendar.HOUR_OF_DAY, 1);
                     mCursor.add(createItem(mStart.getTimeInMillis()));
@@ -129,6 +154,8 @@ public class SampleActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        mHandler = new Handler(Looper.getMainLooper());
+
         setContentView(R.layout.sample_activity);
 
         mToolbar = (Toolbar) findViewById(R.id.toolbar);
@@ -147,6 +174,8 @@ public class SampleActivity extends AppCompatActivity {
         button = (Button) findViewById(R.id.update);
         button.setOnClickListener(mClickListener);
         button = (Button) findViewById(R.id.reload);
+        button.setOnClickListener(mClickListener);
+        button = (Button) findViewById(R.id.live_update);
         button.setOnClickListener(mClickListener);
         button = (Button) findViewById(R.id.mode);
         button.setOnClickListener(mClickListener);

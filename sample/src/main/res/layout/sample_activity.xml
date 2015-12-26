@@ -124,6 +124,13 @@
                         android:text="@string/reload"/>
 
                     <Button
+                        android:id="@+id/live_update"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        style="?android:attr/buttonBarButtonStyle"
+                        android:text="@string/live_update"/>
+
+                    <Button
                         android:id="@+id/add"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
