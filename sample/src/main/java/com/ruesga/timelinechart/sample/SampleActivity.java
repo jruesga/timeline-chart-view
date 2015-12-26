@@ -28,7 +28,6 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.ruesga.timelinechart.InMemoryCursor;
 import com.ruesga.timelinechart.TimelineChartView;
 import com.ruesga.timelinechart.TimelineChartView.OnColorPaletteChangedListener;
 import com.ruesga.timelinechart.TimelineChartView.OnSelectedItemChangedListener;
