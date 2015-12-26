@@ -134,17 +134,18 @@ public class InMemoryCursor implements Cursor {
     /** {@inheritDoc} */
     @Override
     public boolean move(int offset) {
-        if (mCurrentPosition + offset >= mRecords.size()) {
+        final int next = mCurrentPosition + offset;
+        if (next < 0 || next >= mRecords.size()) {
             return false;
         }
-        mCurrentPosition += offset;
+        mCurrentPosition = next;
         return true;
     }
 
     /** {@inheritDoc} */
     @Override
     public boolean moveToPosition(int position) {
-        if (position >= mRecords.size()) {
+        if (position < 0 || position >= mRecords.size()) {
             return false;
         }
         mCurrentPosition = position;
