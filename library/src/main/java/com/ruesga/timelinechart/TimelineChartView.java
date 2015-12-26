@@ -92,18 +92,21 @@ import java.util.TimeZone;
  * The method {@link #observeData(Cursor, int)} can be used to perform optimizations around
  * the data load process. The follow optimizations can be used.
  * <ul>
- *     <li><b>NO_OPTIMIZATIONS</b>. Internal data will be destroyed and recreated every
+ *     <li><b>NO_OPTIMIZATION</b>. Internal data will be destroyed and recreated every
  *         time the cursor changes. Use this value if you know that the cursor can vary its
  *         number of fields (series to display in the graph). This will be the default
  *         optimization by default.</li>
- *     <li><b>NO_VARIATION_IN_SERIES_OPTIMIZATION</b>. Internal data isn't recreate, so
- *         is safe to add, update and delete information, reducing the number of internal
+ *     <li><b>NO_DELETES_OPTIMIZATION</b>. Swap data is consistent, so is safe to add and
+ *         update information (no deletion will happen), reducing the number of internal
  *         references to create. Use this optimization if you know that the cursor won't
- *         vary its number of fields (series to display in the graph).</li>
+ *         vary its number of fields (series to display in the graph) and existent data
+ *         must not be deleted.</li>
  *     <li><b>ONLY_ADDITIONS_OPTIMIZATION</b>. Only new records are added at the end of
  *         the cursor. This is optimized for live graphs where new records are added as
  *         time goes. The data load process won't update, delete or add information
- *         older than the last timestamp saw in the last iteration.</li>
+ *         older than the last timestamp saw in the last iteration. Data in cursor expected
+ *         to be sorted ascending by timestamp and cursor won't vary its number
+ *         of fields (series to display in the graph).</li>
  * </ul>
  * <p />
  * <p />
@@ -294,18 +297,20 @@ public class TimelineChartView extends View {
      * value if you know that the cursor can vary its number of fields (series to display in
      * the graph).
      */
-    public static final int NO_OPTIMIZATIONS = 0;
+    public static final int NO_OPTIMIZATION = 0;
     /**
-     * Internal data isn't recreate, so is safe to add, update and delete information,
+     * Swap data is consistent, so is safe to add and update information (no deletion will happen),
      * reducing the number of internal references to create. Use this optimization if
      * you know that the cursor won't vary its number of fields (series to display in
-     * the graph).
+     * the graph) and existent data must not be deleted.
      */
-    public static final int NO_VARIATION_IN_SERIES_OPTIMIZATION = 1;
+    public static final int NO_DELETES_OPTIMIZATION = 1;
     /**
      * Only new records are added at the end of the cursor. This is optimized for live
      * graphs where new records are added as time goes. The data load process won't update,
      * delete or add information older than the last timestamp saw in the last iteration.
+     * Data in cursor expected to be sorted ascending by timestamp and cursor won't vary
+     * its number of fields (series to display in the graph).
      */
     public static final int ONLY_ADDITIONS_OPTIMIZATION = 2;
 
@@ -323,6 +328,7 @@ public class TimelineChartView extends View {
     private static final int TAP_TIMEOUT = 50;
 
     private Cursor mCursor;
+    private int mOptimizationFlag = NO_OPTIMIZATION;
     private int mSeries;
     private LongSparseArray<Pair<double[],int[]>> mData = new LongSparseArray<>();
     private double mMaxValue;
@@ -885,10 +891,10 @@ public class TimelineChartView extends View {
      * Registers the cursor and start observing changes on it. This method won't perform
      * any sort of optimization in the data processing.
      * @see {@link #observeData(Cursor, int)}
-     * @see {@link #NO_OPTIMIZATIONS}
+     * @see {@link #NO_OPTIMIZATION}
      */
     public void observeData(Cursor c) {
-        observeData(c, NO_OPTIMIZATIONS);
+        observeData(c, NO_OPTIMIZATION);
     }
 
     /**
@@ -907,8 +913,8 @@ public class TimelineChartView extends View {
      * @param c the cursor to observe.
      * @param flag An optimization flag. See optimization constants for a description of
      *             what every optimizion does.
-     * @see {@link #NO_OPTIMIZATIONS}
-     * @see {@link #NO_VARIATION_IN_SERIES_OPTIMIZATION}
+     * @see {@link #NO_OPTIMIZATION}
+     * @see {@link #NO_DELETES_OPTIMIZATION}
      * @see {@link #ONLY_ADDITIONS_OPTIMIZATION}
      */
     public void observeData(Cursor c, int flag) {
@@ -924,6 +930,7 @@ public class TimelineChartView extends View {
 
         // Save the cursor reference and listen for changes
         mCursor = c;
+        mOptimizationFlag = flag;
         reloadCursorData(animate);
         mCursor.registerDataSetObserver(new DataSetObserver() {
             @Override
@@ -1726,21 +1733,67 @@ public class TimelineChartView extends View {
     }
 
     private void processData() {
+        // This optimizations can by applied to data in this method according to the
+        // defined current optimization flag:
+        //
+        //  NO_OPTIMIZATION: All the data is compute again
+        //  NO_DELETES_OPTIMIZATION: Internal can be preserve and only updates
+        //    and additions will happen
+        //  ONLY_ADDITIONS_OPTIMIZATION: Internal is preserve, and only additions are accounted
+
         if (!mCursor.isClosed() && mCursor.moveToFirst()) {
             // Load the cursor to memory
             boolean hasDayFormat = false;
             double max = 0d;
-            LongSparseArray<Pair<double[], int[]>> data = new LongSparseArray<>();
-            int series = mCursor.getColumnCount() - 1;
-            mItem.mSeries = new double[series];
+            final LongSparseArray<Pair<double[], int[]>> data;
+            // Clone the data if we optimization flag allow it.
+            if (mOptimizationFlag != NO_OPTIMIZATION) {
+                data = cloneCurrentData(mCursor.getCount());
+            } else {
+                data = new LongSparseArray<>(mCursor.getCount());
+            }
 
+            int series = mCursor.getColumnCount() - 1;
+            if (mItem.mSeries == null || mItem.mSeries.length != series) {
+                mItem.mSeries = new double[series];
+            }
+
+            long lastTimestamp = -1;
+            if (mOptimizationFlag == ONLY_ADDITIONS_OPTIMIZATION) {
+                hasDayFormat = mTickHasDayFormat;
+                max = mMaxValue;
+                mCursor.moveToLast();
+                if (data.size() > 0) {
+                    lastTimestamp = data.keyAt(data.size() - 1);
+                }
+            }
+
+            // Extract the data from the cursor applying the current optimization flag.
             do {
                 long timestamp = mCursor.getLong(0);
+                if (timestamp == lastTimestamp
+                        && mOptimizationFlag == ONLY_ADDITIONS_OPTIMIZATION) {
+                    break;
+                }
+
                 if (getTickLabelFormat(timestamp) == TICK_LABEL_DAY_FORMAT) {
                     hasDayFormat = true;
                 }
-                final double[] seriesData = new double[series];
-                final int[] indexes = new int[series];
+                final double[] seriesData;
+                final int[] indexes;
+                if (mOptimizationFlag == NO_OPTIMIZATION) {
+                    seriesData = new double[series];
+                    indexes = new int[series];
+                } else {
+                    Pair<double[], int[]> v = data.get(timestamp);
+                    if (v != null) {
+                        seriesData = v.first;
+                        indexes = v.second;
+                    } else {
+                        seriesData = new double[series];
+                        indexes = new int[series];
+                    }
+                }
                 double stackVal = 0d;
                 for (int i = 0; i < series; i++) {
                     final double v = mCursor.getDouble(i + 1);
@@ -1762,7 +1815,8 @@ public class TimelineChartView extends View {
                 }
                 Pair<double[], int[]> pair = new Pair<>(seriesData, indexes);
                 data.put(timestamp, pair);
-            } while (mCursor.moveToNext());
+            } while (mOptimizationFlag == ONLY_ADDITIONS_OPTIMIZATION
+                    ? mCursor.moveToPrevious() : mCursor.moveToNext());
 
             // Calculate the max available offset
             int size = data.size() - 1;
@@ -1782,6 +1836,23 @@ public class TimelineChartView extends View {
             // Cursor is empty or closed
             clearSwapRefs();
         }
+    }
+
+    private LongSparseArray<Pair<double[], int[]>> cloneCurrentData(int capacity) {
+        final LongSparseArray<Pair<double[], int[]>> prevData;
+        synchronized (mLock) {
+            prevData = mData;
+        }
+        if (prevData != null) {
+            final int size = prevData.size();
+            final LongSparseArray<Pair<double[], int[]>> data
+                    = new LongSparseArray<>(Math.max(capacity, size));
+            for (int i = 0; i < size; i++) {
+                data.append(prevData.keyAt(i), prevData.valueAt(i));
+            }
+            return data;
+        }
+        return new LongSparseArray<>();
     }
 
     private void checkCursorIntegrity(Cursor c) {
