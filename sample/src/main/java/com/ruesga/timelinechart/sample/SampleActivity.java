@@ -77,7 +77,8 @@ public class SampleActivity extends AppCompatActivity {
     private final Runnable mLiveUpdateTask = new Runnable() {
         @Override
         public void run() {
-            mStart.add(Calendar.SECOND, LIVE_UPDATE_INTERVAL);
+            mStart.setTimeInMillis(System.currentTimeMillis());
+            mStart.set(Calendar.MILLISECOND, 0);
             mCursor.add(createItem(mStart.getTimeInMillis()));
             mHandler.postDelayed(this, LIVE_UPDATE_INTERVAL * 1000);
         }
@@ -120,13 +121,16 @@ public class SampleActivity extends AppCompatActivity {
                     }
                     break;
                 case R.id.reload:
-                    mCursor = createRandomData();
+                    mCursor = createInMemoryCursor();
                     mGraph.observeData(mCursor);
                     break;
                 case R.id.live_update:
                     mHandler.removeCallbacks(mLiveUpdateTask);
+                    mCursor.removeAll();
                     if (!mInLiveUpdate) {
-                        mHandler.postDelayed(mLiveUpdateTask, LIVE_UPDATE_INTERVAL * 1000);
+                        mHandler.post(mLiveUpdateTask);
+                    } else {
+                        createRandomData(mCursor);
                     }
                     mInLiveUpdate = !mInLiveUpdate;
                     findViewById(R.id.reload).setEnabled(!mInLiveUpdate);
@@ -201,7 +205,7 @@ public class SampleActivity extends AppCompatActivity {
 
 
         // Create random data
-        mCursor = createRandomData();
+        mCursor = createInMemoryCursor();
 
         // Retrieve the data and inject the cursor so the view can start observing changes
         mGraph = (TimelineChartView) findViewById(R.id.graph);
@@ -310,8 +314,13 @@ public class SampleActivity extends AppCompatActivity {
         return item;
     }
 
-    private InMemoryCursor createRandomData() {
+    private InMemoryCursor createInMemoryCursor() {
         InMemoryCursor cursor = new InMemoryCursor(COLUMN_NAMES);
+        createRandomData(cursor);
+        return cursor;
+    }
+
+    private void createRandomData(InMemoryCursor cursor) {
         List<Object[]> data = new ArrayList<>();
         Calendar today = Calendar.getInstance(TimeZone.getDefault(), Locale.getDefault());
         today.set(Calendar.HOUR_OF_DAY, 0);
@@ -326,7 +335,6 @@ public class SampleActivity extends AppCompatActivity {
         }
         mStart.add(Calendar.HOUR_OF_DAY, -1);
         cursor.addAll(data);
-        return cursor;
     }
 }
 
