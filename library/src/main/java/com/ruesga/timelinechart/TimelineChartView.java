@@ -33,6 +33,7 @@ import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.Message;
 import android.support.annotation.RawRes;
@@ -148,6 +149,13 @@ public class TimelineChartView extends View {
     private final Item mItem = new Item();
     private final RectF mSerieRect = new RectF();
 
+    private int mSeriesSwap;
+    private LongSparseArray<Pair<double[],int[]>> mDataSwap = new LongSparseArray<>();
+    private double mMaxValueSwap;
+    private float mLastOffsetSwap;
+    private float mMaxOffsetSwap;
+    private long mCurrentTimestampSwap;
+
     private final RectF mViewArea = new RectF();
     private final RectF mGraphArea = new RectF();
     private final RectF mFooterArea = new RectF();
@@ -221,12 +229,17 @@ public class TimelineChartView extends View {
     private static final int MSG_ON_SELECTION_ITEM_CHANGED = 1;
     private static final int MSG_ON_CLICK_ITEM = 2;
     private static final int MSG_ON_LONG_CLICK_ITEM = 3;
+    private static final int MSG_COMPUTE_DATA = 4;
 
     private final Handler mUiHandler;
+    private Handler mBackgroundHandler;
+    private HandlerThread mBackgroundHandlerThread;
+
     private final Handler.Callback mMessenger = new Handler.Callback() {
         @Override
         public boolean handleMessage(Message msg) {
             switch (msg.what) {
+                // Ui thread
                 case MSG_ON_SELECTION_ITEM_CHANGED:
                     notifyOnSelectionItemChanged((boolean) msg.obj);
                     return true;
@@ -235,6 +248,11 @@ public class TimelineChartView extends View {
                     return true;
                 case MSG_ON_LONG_CLICK_ITEM:
                     notifyGenericLongClickEvent((ItemEvent) msg.obj);
+                    return true;
+
+                // Non-Ui thread
+                case MSG_COMPUTE_DATA:
+                    performComputeData(msg.arg1 == 1, msg.arg2 == 1);
                     return true;
             }
             return false;
@@ -348,6 +366,7 @@ public class TimelineChartView extends View {
         }
 
         // Initialize stuff
+        setupBackgroundHandler();
         setupTickLabels();
         if (getOverScrollMode() != OVER_SCROLL_NEVER) {
             setupEdgeEffects();
@@ -361,13 +380,28 @@ public class TimelineChartView extends View {
     }
 
     @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        setupBackgroundHandler();
+    }
+
+    @Override
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
+
+        // Destroy background thread
+        mBackgroundHandlerThread.quit();
+        mBackgroundHandler = null;
+        mBackgroundHandlerThread = null;
+
+        // Destroy cursor
         if (mCursor != null && !mCursor.isClosed()) {
             mCursor.close();
             mSeries = 0;
             mItem.mSeries = new double[mSeries];
         }
+
+        // Destroy internal tracking variables
         clear();
         mVelocityTracker.recycle();
         mVelocityTracker = null;
@@ -454,9 +488,7 @@ public class TimelineChartView extends View {
     public void setGraphMode(int mode) {
         if (mode != mGraphMode) {
             mGraphMode = mode;
-            // FIXME Perform in a background
-            computeData();
-            ViewCompat.postInvalidateOnAnimation(this);
+            Message.obtain(mBackgroundHandler, MSG_COMPUTE_DATA).sendToTarget();
         }
     }
 
@@ -556,7 +588,7 @@ public class TimelineChartView extends View {
 
             @Override
             public void onInvalidated() {
-                invalidateCursorData();
+                clear();
             }
         });
     }
@@ -1176,6 +1208,15 @@ public class TimelineChartView extends View {
         mCurrentPositionIndicatorHeight = mBarItemWidth / 4f;
     }
 
+    private void setupBackgroundHandler() {
+        if (mBackgroundHandler == null) {
+            // Create a background thread
+            mBackgroundHandlerThread = new HandlerThread(TAG + "BackgroundThread");
+            mBackgroundHandlerThread.start();
+            mBackgroundHandler = new Handler(mBackgroundHandlerThread.getLooper(), mMessenger);
+        }
+    }
+
     private void setupTickLabels() {
         synchronized (mLock) {
             final float textSizeFactor = mFooterBarHeight / mDefFooterBarHeight;
@@ -1253,22 +1294,27 @@ public class TimelineChartView extends View {
             @Override
             public void onAnimationEnd(Animator animation) {
                 if (mInZoomOut) {
-                    // FIXME Perform in a background
-                    computeData();
+                    // Swap temporary refs
+                    swapRefs();
 
-                    // Generate bar items palette based on background color
-                    setupSeriesBackground(mGraphAreaBgPaint.getColor());
-
-                    // Redraw the data and notify the changes
-                    notifyOnSelectionItemChanged(false);
-
-                    // ZoomIn Effect
-                    ViewCompat.postOnAnimation(TimelineChartView.this, new Runnable() {
+                    mUiHandler.post(new Runnable() {
                         @Override
                         public void run() {
-                            mInZoomOut = false;
-                            mZoomAnimator.setFloatValues(MAX_ZOOM_OUT, MIN_ZOOM_OUT);
-                            mZoomAnimator.start();
+                            // Generate bar items palette based on background color
+                            setupSeriesBackground(mGraphAreaBgPaint.getColor());
+
+                            // Redraw the data and notify the changes
+                            notifyOnSelectionItemChanged(false);
+
+                            // ZoomIn Effect
+                            ViewCompat.postOnAnimation(TimelineChartView.this, new Runnable() {
+                                @Override
+                                public void run() {
+                                    mInZoomOut = false;
+                                    mZoomAnimator.setFloatValues(MAX_ZOOM_OUT, MIN_ZOOM_OUT);
+                                    mZoomAnimator.start();
+                                }
+                            });
                         }
                     });
                 } else {
@@ -1288,8 +1334,16 @@ public class TimelineChartView extends View {
     }
 
     private void reloadCursorData(boolean animate) {
-        // Load the cursor to memory
-        if (mAnimateCursorSwapTransition && animate) {
+        int arg1 = mAnimateCursorSwapTransition && animate ? 1 : 0;
+        Message.obtain(mBackgroundHandler, MSG_COMPUTE_DATA, arg1, 1).sendToTarget();
+    }
+
+    private void performComputeData(boolean animate, boolean notify) {
+        // Process the data
+        processData();
+
+        // Animate the scene
+        if (animate) {
             if (mZoomAnimator.isRunning()) {
                 mZoomAnimator.cancel();
             }
@@ -1297,33 +1351,39 @@ public class TimelineChartView extends View {
             mZoomAnimator.setFloatValues(MIN_ZOOM_OUT, MAX_ZOOM_OUT);
             mState = STATE_ZOOMING;
             mZoomAnimator.start();
-        } else {
-            // FIXME Perform in a background
-            computeData();
 
-            // Generate bar items palette based on background color
-            setupSeriesBackground(mGraphAreaBgPaint.getColor());
+            // Notify the changes
+        } else if (notify) {
+            swapRefs();
 
-            // Redraw the data and notify the changes
-            ViewCompat.postInvalidateOnAnimation(this);
-            notifyOnSelectionItemChanged(false);
+            mUiHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    // Generate bar items palette based on background color
+                    setupSeriesBackground(mGraphAreaBgPaint.getColor());
+                    notifyOnSelectionItemChanged(false);
+                }
+            });
         }
+
+        // Update the graph view
+        ViewCompat.postInvalidateOnAnimation(TimelineChartView.this);
     }
 
-    private void computeData() {
+    private void processData() {
         if (!mCursor.isClosed() && mCursor.moveToFirst()) {
             // Load the cursor to memory
             double max = 0d;
             LongSparseArray<Pair<double[], int[]>> data = new LongSparseArray<>();
-            mSeries = mCursor.getColumnCount() - 1;
-            mItem.mSeries = new double[mSeries];
+            int series = mCursor.getColumnCount() - 1;
+            mItem.mSeries = new double[series];
 
             do {
                 long timestamp = mCursor.getLong(0);
-                final double[] seriesData = new double[mSeries];
-                final int[] indexes = new int[mSeries];
+                final double[] seriesData = new double[series];
+                final int[] indexes = new int[series];
                 double stackVal = 0d;
-                for (int i = 0; i < mSeries; i++) {
+                for (int i = 0; i < series; i++) {
                     final double v = mCursor.getDouble(i + 1);
                     seriesData[i] = v;
                     if (mGraphMode != GRAPH_MODE_BARS_STACK && v > max) {
@@ -1351,15 +1411,16 @@ public class TimelineChartView extends View {
 
             //swap data
             synchronized (mLock) {
-                mData = data;
-                mMaxValue = max;
-                mLastOffset = -1.f;
-                mMaxOffset = maxOffset;
-                mCurrentTimestamp = -2;
+                mSeriesSwap = series;
+                mDataSwap = data;
+                mMaxValueSwap = max;
+                mLastOffsetSwap = -1.f;
+                mMaxOffsetSwap = maxOffset;
+                mCurrentTimestampSwap = -2;
             }
         } else {
             // Cursor is empty or closed
-            clear();
+            clearSwapRefs();
         }
     }
 
@@ -1429,8 +1490,21 @@ public class TimelineChartView extends View {
         }
     }
 
-    private void invalidateCursorData() {
-        clear();
+    private void swapRefs() {
+        synchronized (mLock) {
+            mSeries = mSeriesSwap;
+            mData = mDataSwap;
+            mMaxValue = mMaxValueSwap;
+            mLastOffset = mLastOffsetSwap;
+            mMaxOffset = mMaxOffsetSwap;
+            mCurrentTimestamp = mCurrentTimestampSwap;
+        }
+    }
+
+    private void clearSwapRefs() {
+        mDataSwap.clear();
+        mMaxValueSwap = 0d;
+        mCurrentTimestamp = -1;
     }
 
     private void clear() {
