@@ -55,7 +55,7 @@ public class SampleActivity extends AppCompatActivity {
     private Calendar mStart;
 
     private final SimpleDateFormat DATETIME_FORMATTER =
-            new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+            new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
     private final NumberFormat NUMBER_FORMATTER = new DecimalFormat("#0.00");
     private final String[] COLUMN_NAMES = {"timestamp", "Serie 1", "Serie 2", "Serie 3"};
 
@@ -111,13 +111,13 @@ public class SampleActivity extends AppCompatActivity {
                     mGraph.observeData(mCursor);
                     break;
                 case R.id.add:
-                    mStart.add(Calendar.DAY_OF_YEAR, 1);
+                    mStart.add(Calendar.HOUR_OF_DAY, 1);
                     mCursor.add(createItem(mStart.getTimeInMillis()));
                     break;
                 case R.id.delete:
                     int position = mCursor.getCount() - 1;
                     mCursor.remove(position);
-                    mStart.add(Calendar.DAY_OF_YEAR, -1);
+                    mStart.add(Calendar.HOUR_OF_DAY, -1);
                     break;
                 case R.id.update:
                     position = mCursor.getCount() - 1;
@@ -258,7 +258,6 @@ public class SampleActivity extends AppCompatActivity {
         });
 
         mGraph.observeData(mCursor);
-
     }
 
     @Override
@@ -292,12 +291,12 @@ public class SampleActivity extends AppCompatActivity {
         today.set(Calendar.SECOND, 0);
         today.set(Calendar.MILLISECOND, 0);
         mStart = (Calendar) today.clone();
-        mStart.add(Calendar.DAY_OF_YEAR, -15);
+        mStart.add(Calendar.HOUR_OF_DAY, -48);
         while (mStart.compareTo(today) <= 0) {
             data.add(createItem(mStart.getTimeInMillis()));
-            mStart.add(Calendar.DAY_OF_YEAR, 1);
+            mStart.add(Calendar.HOUR_OF_DAY, 1);
         }
-        mStart.add(Calendar.DAY_OF_YEAR, -1);
+        mStart.add(Calendar.HOUR_OF_DAY, -1);
         cursor.addAll(data);
         return cursor;
     }

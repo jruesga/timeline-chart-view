@@ -46,6 +46,18 @@
     <!-- Default bar item mode (default to tlcStack) -->
     <bool name="tlcDefAnimateCursorSwapTransition">true</bool>
 
-    <!-- Default tick label format -->
-    <string name="tlcDefTickFormat">dd\u000AMMM\u000Ayyyy</string>
+
+    <!-- Default tick label values (for testing purposes) -->
+    <string-array name="tlcDefTickLabelValues">
+        <item>1451602799000</item>
+        <item>1451602740000</item>
+        <item>1451516400000</item>
+    </string-array>
+
+    <!-- Default tick label formats -->
+    <string-array name="tlcDefTickLabelFormats">
+        <item>HH:mm:ss</item>
+        <item>HH:mm</item>
+        <item>dd\u000AMMM\u000Ayyyy</item>
+    </string-array>
 </resources>

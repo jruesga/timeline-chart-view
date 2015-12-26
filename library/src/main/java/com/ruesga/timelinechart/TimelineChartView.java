@@ -63,11 +63,13 @@ import com.ruesga.timelinechart.helpers.MaterialPaletteHelper;
 
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
+import java.util.TimeZone;
 
 /**
  * A view to represent data over a timeline.<p />
@@ -307,6 +309,10 @@ public class TimelineChartView extends View {
      */
     public static final int ONLY_ADDITIONS_OPTIMIZATION = 2;
 
+    // Sort of available formats for tick labels
+    private static final int TICK_LABEL_SECONDS_FORMAT = 0;
+    private static final int TICK_LABEL_HOUR_MINUTES_FORMAT = 1;
+    private static final int TICK_LABEL_DAY_FORMAT = 2;
 
     private static final float MAX_ZOOM_OUT = 4.0f;
     private static final float MIN_ZOOM_OUT = 1.0f;
@@ -329,6 +335,7 @@ public class TimelineChartView extends View {
     private float mLastOffsetSwap;
     private float mMaxOffsetSwap;
     private long mCurrentTimestampSwap;
+    private boolean mTickHasDayFormatSwap;
 
     private final RectF mViewArea = new RectF();
     private final RectF mGraphArea = new RectF();
@@ -378,11 +385,14 @@ public class TimelineChartView extends View {
     private int mMaxBarItemsInScreen = 0;
     private final int[] mItemsOnScreen = new int[2];
 
-    private SimpleDateFormat mTickFormatter;
+    private SimpleDateFormat[] mTickFormatter;
     private Date mTickDate;
     private StringBuilder mTickText;
-    private DynamicSpannableString mTickTextSpannable;
-    private DynamicLayout mTickTextLayout;
+    private DynamicSpannableString[] mTickTextSpannables;
+    private DynamicLayout[] mTickTextLayouts;
+    private Calendar mTickCalendar;
+    private boolean mTickHasDayFormat;
+    private float mTickLabelMinHeight;
 
     private VelocityTracker mVelocityTracker;
     private OverScroller mScroller;
@@ -557,6 +567,10 @@ public class TimelineChartView extends View {
             setBackgroundColor(ContextCompat.getColor(ctx, android.R.color.transparent));
         }
 
+        // Minimize the impact of create dynamic layouts by assume that in most case
+        // we will have a day formatter
+        mTickHasDayFormat = true;
+
         // Initialize stuff
         setupBackgroundHandler();
         setupTickLabels();
@@ -605,6 +619,7 @@ public class TimelineChartView extends View {
     @Override
     protected void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
+        mTickCalendar = Calendar.getInstance(TimeZone.getDefault(), Locale.getDefault());
     }
 
     /**
@@ -1429,20 +1444,22 @@ public class TimelineChartView extends View {
         for (int i = mItemsOnScreen[1]; i >= mItemsOnScreen[0]; i--) {
             // Update the dynamic layout
             long timestamp = data.keyAt(i);
+            final int tickFormat = getTickLabelFormat(timestamp);
+            final DynamicLayout layout = mTickTextLayouts[tickFormat];
             mTickDate.setTime(timestamp);
-            final String text = mTickFormatter.format(mTickDate)
+            final String text = mTickFormatter[tickFormat].format(mTickDate)
                     .replace(".", "")
                     .toUpperCase(Locale.getDefault());
             mTickText.replace(0, mTickText.length(), text);
-            mTickTextSpannable.update(mTickText);
+            mTickTextSpannables[tickFormat].update(mTickText);
 
             // Calculate the x position and draw the layout
             final float x = cx + mCurrentOffset - (mBarWidth * (size - i))
-                    - (mTickTextLayout.getWidth() / 2);
+                    - (layout.getWidth() / 2);
             final int restoreCount = c.save();
             c.translate(x, mFooterArea.top
-                    + (mFooterArea.height() / 2 - mTickTextLayout.getHeight() / 2));
-            mTickTextLayout.draw(c);
+                    + (mFooterArea.height() / 2 - mTickLabelMinHeight / 2));
+            layout.draw(c);
             c.restoreToCount(restoreCount);
         }
     }
@@ -1565,21 +1582,37 @@ public class TimelineChartView extends View {
 
     private void setupTickLabels() {
         synchronized (mLock) {
+            mTickCalendar = Calendar.getInstance(TimeZone.getDefault(), Locale.getDefault());
             final float textSizeFactor = mFooterBarHeight / mDefFooterBarHeight;
-            mTickLabelFgPaint.setTextSize((int)(36 * textSizeFactor));
+            mTickLabelFgPaint.setTextSize((int) (36 * textSizeFactor));
 
-            final String format = getResources().getString(R.string.tlcDefTickFormat);
-            mTickFormatter = new SimpleDateFormat(format, Locale.getDefault());
+            final String[] formats = getResources().getStringArray(R.array.tlcDefTickLabelFormats);
+            final String[] values = getResources().getStringArray(R.array.tlcDefTickLabelValues);
             mTickDate = new Date();
-            final String text = mTickFormatter.format(mTickDate)
-                    .replace(".", "")
-                    .toUpperCase(Locale.getDefault());
-            mTickText = new StringBuilder(text);
-            mTickTextSpannable = new DynamicSpannableString(mTickText);
-            mTickTextSpannable.setSpan(new AbsoluteSizeSpan((int)(56 * textSizeFactor)),0, 2,
-                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            mTickTextLayout = new DynamicLayout(mTickTextSpannable, mTickLabelFgPaint,
-                    (int) mBarItemWidth, Layout.Alignment.ALIGN_CENTER, 1.0f, 1.0f, false);
+
+            int count = formats.length;
+            mTickTextLayouts = new DynamicLayout[count];
+            mTickFormatter = new SimpleDateFormat[count];
+            mTickTextSpannables = new DynamicSpannableString[count];
+            for (int i = 0; i < count; i++) {
+                mTickFormatter[i] = new SimpleDateFormat(formats[i], Locale.getDefault());
+                mTickDate.setTime(Long.valueOf(values[i]));
+                final String text = mTickFormatter[i].format(mTickDate)
+                        .replace(".", "")
+                        .toUpperCase(Locale.getDefault());
+                mTickText = new StringBuilder(text);
+                mTickTextSpannables[i] = new DynamicSpannableString(mTickText);
+                if (i == (count - 1)) {
+                    mTickTextSpannables[i].setSpan(new AbsoluteSizeSpan(
+                            (int) (56 * textSizeFactor)), 0, 2, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                }
+                mTickTextLayouts[i] = new DynamicLayout(mTickTextSpannables[i], mTickLabelFgPaint,
+                        (int) mBarItemWidth, Layout.Alignment.ALIGN_CENTER, 1.0f, 1.0f, false);
+            }
+
+            // Save min height
+            mTickLabelMinHeight = mTickTextLayouts[
+                    mTickHasDayFormat ? mTickTextLayouts.length - 1 : 0].getHeight();
         }
     }
 
@@ -1695,6 +1728,7 @@ public class TimelineChartView extends View {
     private void processData() {
         if (!mCursor.isClosed() && mCursor.moveToFirst()) {
             // Load the cursor to memory
+            boolean hasDayFormat = false;
             double max = 0d;
             LongSparseArray<Pair<double[], int[]>> data = new LongSparseArray<>();
             int series = mCursor.getColumnCount() - 1;
@@ -1702,6 +1736,9 @@ public class TimelineChartView extends View {
 
             do {
                 long timestamp = mCursor.getLong(0);
+                if (getTickLabelFormat(timestamp) == TICK_LABEL_DAY_FORMAT) {
+                    hasDayFormat = true;
+                }
                 final double[] seriesData = new double[series];
                 final int[] indexes = new int[series];
                 double stackVal = 0d;
@@ -1739,6 +1776,7 @@ public class TimelineChartView extends View {
                 mLastOffsetSwap = -1.f;
                 mMaxOffsetSwap = maxOffset;
                 mCurrentTimestampSwap = -2;
+                mTickHasDayFormatSwap = hasDayFormat;
             }
         } else {
             // Cursor is empty or closed
@@ -1820,6 +1858,10 @@ public class TimelineChartView extends View {
             mLastOffset = mLastOffsetSwap;
             mMaxOffset = mMaxOffsetSwap;
             mCurrentTimestamp = mCurrentTimestampSwap;
+            if (mTickHasDayFormat != mTickHasDayFormatSwap) {
+                mTickHasDayFormat = mTickHasDayFormatSwap;
+                setupTickLabels();
+            }
         }
     }
 
@@ -1827,6 +1869,7 @@ public class TimelineChartView extends View {
         mDataSwap.clear();
         mMaxValueSwap = 0d;
         mCurrentTimestamp = -1;
+        mTickHasDayFormatSwap = false;
     }
 
     private void clear() {
@@ -1909,12 +1952,35 @@ public class TimelineChartView extends View {
         if (!mShowFooter) {
             return;
         }
-        float minWidth = mTickTextLayout.getWidth();
-        if (minWidth > mBarItemWidth) {
-            Log.w(TAG, "There is not enough space for labels. Switch BarItemWidth to " + minWidth);
-            mBarItemWidth = mTickTextLayout.getWidth();
+        if (mTickTextLayouts != null) {
+            float minWidth = 0.f;
+            for (DynamicLayout layout : mTickTextLayouts) {
+                final float width = layout.getWidth();
+                if (minWidth < width) {
+                    minWidth = width;
+                }
+            }
+            if (minWidth > mBarItemWidth) {
+                Log.w(TAG, "There is not enough space for labels. Switch BarItemWidth to " + minWidth);
+                mBarItemWidth = minWidth;
+            }
         }
         mBarWidth = mBarItemWidth + mBarItemSpace;
+    }
+
+    private int getTickLabelFormat(long timestamp) {
+        mTickCalendar.setTimeInMillis(timestamp);
+        final int hour = mTickCalendar.get(Calendar.HOUR_OF_DAY);
+        final int minute = mTickCalendar.get(Calendar.MILLISECOND);
+        final int second = mTickCalendar.get(Calendar.SECOND);
+        final int millisecond = mTickCalendar.get(Calendar.MILLISECOND);
+        if (hour == 0 && minute == 0 && second == 0 && millisecond == 0) {
+            return TICK_LABEL_DAY_FORMAT;
+        }
+        if (second == 0 && millisecond == 0) {
+            return TICK_LABEL_HOUR_MINUTES_FORMAT;
+        }
+        return TICK_LABEL_SECONDS_FORMAT;
     }
 
     private void performSelectionSoundEffect() {
