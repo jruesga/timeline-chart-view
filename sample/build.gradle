@@ -11,8 +11,6 @@ dependencies {
 android {
     defaultConfig {
         applicationId "com.ruesga.timelinechart.sample"
-        versionCode 1
-        versionName "0.0.1"
 
         set("appName", "TimelineChart View Sample")
         resValue "string", "app_name", android.defaultConfig.appName

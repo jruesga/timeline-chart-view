@@ -9,4 +9,18 @@ android {
         resourcePrefix 'tlc'
         consumerProguardFiles file('proguard.txt')
     }
+
+    buildTypes {
+        release {
+            libraryVariants.all { variant ->
+                variant.outputs.each { output ->
+                    def out = output.outputFile;
+                    output.outputFile = new File(
+                            (String) out.parent,
+                            (String) "timeline-chart-view-" + defaultConfig.versionName + ".apk"
+                    )
+                }
+            }
+        }
+    }
 }
