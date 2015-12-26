@@ -174,7 +174,10 @@ import java.util.TimeZone;
  *
  *     <li><b>tlcAnimateCursorSwapTransition</b>: Whether full cursor swap are graphical animated.
  *         {@link #setAnimateCursorSwapTransition(boolean)} can be used at runtime to set
- *         the behaviour of cursor swap.</li><p />
+ *
+ *     <li><b>tlcFollowCursorPosition</b>: Whether follow real time cursor updates (live update).
+ *         Only if scroll is in the last item. {@link #setAnimateCursorSwapTransition(boolean)}
+ *         can be used at runtime to set the behaviour of cursor swap.</li><p />
  * </ul>
  */
 public class TimelineChartView extends View {
@@ -351,6 +354,7 @@ public class TimelineChartView extends View {
     private boolean mPlaySelectionSoundEffect;
     private int mSelectionSoundEffectSource;
     private boolean mAnimateCursorSwapTransition;
+    private boolean mFollowCursorPosition;
 
     private EdgeEffect mEdgeEffectLeft;
     private EdgeEffect mEdgeEffectRight;
@@ -519,6 +523,7 @@ public class TimelineChartView extends View {
         mPlaySelectionSoundEffect = res.getBoolean(R.bool.tlcDefPlaySelectionSoundEffect);
         mSelectionSoundEffectSource = res.getInteger(R.integer.tlcDefSelectionSoundEffectSource);
         mAnimateCursorSwapTransition = res.getBoolean(R.bool.tlcDefAnimateCursorSwapTransition);
+        mFollowCursorPosition = res.getBoolean(R.bool.tlcDefFollowCursorPosition);
 
         mGraphAreaBgPaint = new Paint();
         mGraphAreaBgPaint.setColor(graphBgColor);
@@ -552,6 +557,8 @@ public class TimelineChartView extends View {
                     mGraphMode = a.getInt(attr, mGraphMode);
                 } else if (attr == R.styleable.tlcTimelineChartView_tlcAnimateCursorSwapTransition) {
                     mAnimateCursorSwapTransition = a.getBoolean(attr, mAnimateCursorSwapTransition);
+                } else if (attr == R.styleable.tlcTimelineChartView_tlcFollowCursorPosition) {
+                    mFollowCursorPosition = a.getBoolean(attr, mFollowCursorPosition);
                 } else if (attr == R.styleable.tlcTimelineChartView_tlcBarItemWidth) {
                     mBarItemWidth = a.getDimension(attr, mBarItemWidth);
                 } else if (attr == R.styleable.tlcTimelineChartView_tlcBarItemSpace) {
@@ -760,6 +767,20 @@ public class TimelineChartView extends View {
      */
     public void setAnimateCursorSwapTransition(boolean animateCursorSwapTransition) {
         mAnimateCursorSwapTransition = animateCursorSwapTransition;
+    }
+
+    /**
+     * Whether graph is following real time cursor updates (live update).
+     */
+    public boolean isFollowCursorPosition() {
+        return mFollowCursorPosition;
+    }
+
+    /**
+     * Whether follow real time cursor updates (live update). Only if scroll is in the last item.
+     */
+    public void setFollowCursorPosition(boolean follow) {
+        mFollowCursorPosition = follow;
     }
 
     /**
@@ -1936,8 +1957,10 @@ public class TimelineChartView extends View {
             mMaxOffset = mMaxOffsetSwap;
 
             // Compute current offset and timestamp
-            boolean haveTimestamp = mData.indexOfKey(mCurrentTimestamp) >= 0;
-            if (haveTimestamp) {
+            final int index = mData.indexOfKey(mCurrentTimestamp);
+            final boolean lastItem = mCurrentOffset == 0.f;
+            final boolean haveTimestamp = index >= 0;
+            if (haveTimestamp && (!lastItem || !mFollowCursorPosition)) {
                 mCurrentOffset = computeOffsetForTimestamp(mCurrentTimestamp);
             } else {
                 mCurrentOffset = 0;

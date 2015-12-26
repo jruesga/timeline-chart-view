@@ -110,7 +110,6 @@ public class SampleActivity extends AppCompatActivity {
                     if (mSound > 2) {
                         mSound = 0;
                     }
-
                     if (mSound == 0) {
                         mGraph.setPlaySelectionSoundEffect(false);
                     } else if (mSound == 1) {
@@ -128,8 +127,10 @@ public class SampleActivity extends AppCompatActivity {
                     mHandler.removeCallbacks(mLiveUpdateTask);
                     mCursor.removeAll();
                     if (!mInLiveUpdate) {
+                        mGraph.setFollowCursorPosition(true);
                         mHandler.post(mLiveUpdateTask);
                     } else {
+                        mGraph.setFollowCursorPosition(false);
                         createRandomData(mCursor);
                     }
                     mInLiveUpdate = !mInLiveUpdate;

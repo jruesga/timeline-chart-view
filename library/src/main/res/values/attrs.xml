@@ -50,5 +50,9 @@
 
         <!-- Whether animate cursor swap transition -->
         <attr name="tlcAnimateCursorSwapTransition" format="boolean" />
+
+        <!-- Whether follow real time cursor updates (live update). Only if
+             scroll is in the last item -->
+        <attr name="tlcFollowCursorPosition" format="boolean" />
     </declare-styleable>
 </resources>
