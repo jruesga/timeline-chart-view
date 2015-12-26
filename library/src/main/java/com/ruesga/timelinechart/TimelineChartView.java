@@ -560,7 +560,7 @@ public class TimelineChartView extends View {
         // Initialize stuff
         setupBackgroundHandler();
         setupTickLabels();
-        if (getOverScrollMode() != OVER_SCROLL_NEVER) {
+        if (ViewCompat.getOverScrollMode(this) != ViewCompat.OVER_SCROLL_NEVER) {
             setupEdgeEffects();
         }
         setupAnimators();
@@ -1025,12 +1025,13 @@ public class TimelineChartView extends View {
     }
 
     private void onOverScroll() {
-        final boolean needOverscroll;
+        final boolean needOverScroll;
         synchronized (mLock) {
-            needOverscroll = mData.size() >= Math.floor(mMaxBarItemsInScreen / 2);
+            needOverScroll = mData.size() >= Math.floor(mMaxBarItemsInScreen / 2);
         }
-        if (getOverScrollMode() == OVER_SCROLL_ALWAYS ||
-                (getOverScrollMode() == OVER_SCROLL_IF_CONTENT_SCROLLS && needOverscroll)) {
+        final int overScrollMode = ViewCompat.getOverScrollMode(this);
+        if (overScrollMode == ViewCompat.OVER_SCROLL_ALWAYS ||
+                (overScrollMode == ViewCompat.OVER_SCROLL_IF_CONTENT_SCROLLS && needOverScroll)) {
             boolean needsInvalidate = false;
             if (mCurrentOffset > mMaxOffset) {
                 mEdgeEffectLeft.onPull(mCurrentOffset - mMaxOffset);
@@ -1068,12 +1069,13 @@ public class TimelineChartView extends View {
             ViewCompat.postInvalidateOnAnimation(this);
         } else if (mState > STATE_MOVING) {
             boolean needsInvalidate = false;
-            final boolean needOverscroll;
+            final boolean needOverScroll;
             synchronized (mLock) {
-                needOverscroll = mData.size() >= Math.floor(mMaxBarItemsInScreen / 2);
+                needOverScroll = mData.size() >= Math.floor(mMaxBarItemsInScreen / 2);
             }
-            if (getOverScrollMode() == OVER_SCROLL_ALWAYS ||
-                    (getOverScrollMode() == OVER_SCROLL_IF_CONTENT_SCROLLS && needOverscroll)) {
+            final int overScrollMode = ViewCompat.getOverScrollMode(this);
+            if (overScrollMode == ViewCompat.OVER_SCROLL_ALWAYS || (needOverScroll &&
+                    overScrollMode == ViewCompat.OVER_SCROLL_IF_CONTENT_SCROLLS)) {
                 float x = mScroller.getCurrX();
                 if (x >= mMaxOffset && mEdgeEffectLeft.isFinished() && !mEdgeEffectLeftActive) {
                     mEdgeEffectLeft.onAbsorb((int) mScroller.getCurrVelocity());
