@@ -404,6 +404,7 @@ public class TimelineChartView extends View {
     private static final int MSG_ON_CLICK_ITEM = 2;
     private static final int MSG_ON_LONG_CLICK_ITEM = 3;
     private static final int MSG_COMPUTE_DATA = 4;
+    private static final int MSG_UPDATE_COMPUTED_DATA = 5;
 
     private final Handler mUiHandler;
     private Handler mBackgroundHandler;
@@ -422,6 +423,20 @@ public class TimelineChartView extends View {
                     return true;
                 case MSG_ON_LONG_CLICK_ITEM:
                     notifyGenericLongClickEvent((ItemEvent) msg.obj);
+                    return true;
+                case MSG_UPDATE_COMPUTED_DATA:
+                    // Generate bar items palette based on background color
+                    setupSeriesBackground(mGraphAreaBgPaint.getColor());
+
+                    // Redraw the data and notify the changes
+                    notifyOnSelectionItemChanged(false);
+
+                    // Animate?
+                    if (msg.arg1 == 1) {
+                        mInZoomOut = false;
+                        mZoomAnimator.setFloatValues(MAX_ZOOM_OUT, MIN_ZOOM_OUT);
+                        mZoomAnimator.start();
+                    }
                     return true;
 
                 // Non-Ui thread
@@ -1626,26 +1641,8 @@ public class TimelineChartView extends View {
                     // Swap temporary refs
                     swapRefs();
 
-                    mUiHandler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            // Generate bar items palette based on background color
-                            setupSeriesBackground(mGraphAreaBgPaint.getColor());
-
-                            // Redraw the data and notify the changes
-                            notifyOnSelectionItemChanged(false);
-
-                            // ZoomIn Effect
-                            ViewCompat.postOnAnimation(TimelineChartView.this, new Runnable() {
-                                @Override
-                                public void run() {
-                                    mInZoomOut = false;
-                                    mZoomAnimator.setFloatValues(MAX_ZOOM_OUT, MIN_ZOOM_OUT);
-                                    mZoomAnimator.start();
-                                }
-                            });
-                        }
-                    });
+                    // Update the view, notify and end the animation
+                    Message.obtain(mUiHandler, MSG_UPDATE_COMPUTED_DATA, 1, 0).sendToTarget();
                 } else {
                     mState = STATE_IDLE;
                 }
@@ -1671,8 +1668,8 @@ public class TimelineChartView extends View {
         // Process the data
         processData();
 
-        // Animate the scene
         if (animate) {
+            // Run in an animation
             if (mZoomAnimator.isRunning()) {
                 mZoomAnimator.cancel();
             }
@@ -1681,18 +1678,12 @@ public class TimelineChartView extends View {
             mState = STATE_ZOOMING;
             mZoomAnimator.start();
 
-            // Notify the changes
         } else if (notify) {
+            // Swap temporary refs
             swapRefs();
 
-            mUiHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    // Generate bar items palette based on background color
-                    setupSeriesBackground(mGraphAreaBgPaint.getColor());
-                    notifyOnSelectionItemChanged(false);
-                }
-            });
+            // Update the view and notify
+            Message.obtain(mUiHandler, MSG_UPDATE_COMPUTED_DATA, 0, 0).sendToTarget();
         }
 
         // Update the graph view
