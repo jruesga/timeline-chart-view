@@ -384,13 +384,13 @@ public class InMemoryCursor implements Cursor {
     /** {@inheritDoc} */
     @Override
     public void registerContentObserver(ContentObserver observer) {
-        throw new UnsupportedOperationException();
+        // Ignore
     }
 
     /** {@inheritDoc} */
     @Override
     public void unregisterContentObserver(ContentObserver observer) {
-        throw new UnsupportedOperationException();
+        // Ignore
     }
 
     /** {@inheritDoc} */
