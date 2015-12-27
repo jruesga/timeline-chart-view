@@ -395,6 +395,7 @@ public class TimelineChartView extends View {
     private float mMaxOffset = 0.f;
     private float mInitialTouchOffset = 0.f;
     private float mInitialTouchX = 0.f;
+    private float mInitialTouchY = 0.f;
     private float mLastX = 0.f;
     private float mLastY = 0.f;
     private float mCurrentZoom = 1.f;
@@ -519,7 +520,7 @@ public class TimelineChartView extends View {
 
         final ViewConfiguration vc = ViewConfiguration.get(ctx);
         mLongPressTimeout = ViewConfiguration.getLongPressTimeout();
-        mTouchSlop = vc.getScaledTouchSlop();
+        mTouchSlop = vc.getScaledTouchSlop() / 2;
         mMaxFlingVelocity = vc.getScaledMaximumFlingVelocity();
         mScroller = new OverScroller(ctx);
 
@@ -1026,6 +1027,7 @@ public class TimelineChartView extends View {
 
                 mInitialTouchOffset = mCurrentOffset;
                 mInitialTouchX = event.getX();
+                mInitialTouchY = event.getY();
                 mLastPressTimestamp = now;
                 return true;
 
@@ -1036,11 +1038,12 @@ public class TimelineChartView extends View {
                 }
 
                 mVelocityTracker.addMovement(event);
-                float diff = event.getX() - mInitialTouchX;
-                if (Math.abs(diff) > mTouchSlop || mState >= STATE_MOVING) {
+                float diffX = event.getX() - mInitialTouchX;
+                float diffY = event.getY() - mInitialTouchY;
+                if (Math.abs(diffX) > mTouchSlop || mState >= STATE_MOVING) {
                     mUiHandler.removeCallbacks(mLongPressDetector);
 
-                    mCurrentOffset = mInitialTouchOffset + diff;
+                    mCurrentOffset = mInitialTouchOffset + diffX;
                     if (mCurrentOffset < 0) {
                         onOverScroll();
                         mCurrentOffset = 0;
@@ -1051,6 +1054,9 @@ public class TimelineChartView extends View {
                     mVelocityTracker.computeCurrentVelocity(1000, mMaxFlingVelocity);
                     mState = STATE_MOVING;
                     ViewCompat.postInvalidateOnAnimation(this);
+                } else if (Math.abs(diffY) > mTouchSlop && mState < STATE_MOVING) {
+                    mUiHandler.removeCallbacks(mLongPressDetector);
+                    return false;
                 }
                 return true;
 
