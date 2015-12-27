@@ -15,3 +15,6 @@
  */
 
 include ':library', ':sample'
+
+project(":library").name = 'timeline-chart-view'
+project(":sample").name = 'timeline-chart-view-sample'

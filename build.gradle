@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-buildscript {
-    repositories {
-        jcenter()
-    }
-    dependencies {
-        classpath 'com.android.tools.build:gradle:1.5.0'
-    }
-}
-
 allprojects {
+    buildscript {
+        repositories {
+            jcenter()
+        }
+        dependencies {
+            classpath 'com.android.tools.build:gradle:1.5.0'
+        }
+    }
+
     repositories {
         jcenter()
     }
@@ -41,7 +41,7 @@ subprojects {
                     targetSdkVersion 23
 
                     versionCode = 1
-                    versionName = '0.0.1'
+                    versionName = rootProject.subprojects.ext.versionName[0]
                 }
             }
         }
@@ -49,6 +49,7 @@ subprojects {
 
     ext {
         supportVersion = '23.1.1'
+        versionName = '0.0.1'
     }
 }
 

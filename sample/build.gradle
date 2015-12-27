@@ -1,11 +1,13 @@
 apply plugin: 'com.android.application'
 
+def supportVersion = rootProject.subprojects.ext.supportVersion[0]
+
 dependencies {
-    compile 'com.android.support:support-v4:' + ((String) rootProject.subprojects.ext.supportVersion)
-    compile 'com.android.support:appcompat-v7:' + ((String) rootProject.subprojects.ext.supportVersion)
-    compile 'com.android.support:design:' + ((String) rootProject.subprojects.ext.supportVersion)
+    compile 'com.android.support:support-v4:' + supportVersion
+    compile 'com.android.support:appcompat-v7:' + supportVersion
+    compile 'com.android.support:design:' + supportVersion
     compile 'com.github.ismaeltoe:flowlayout:1.0'
-    compile project(':library')
+    compile project(':timeline-chart-view')
 }
 
 android {
