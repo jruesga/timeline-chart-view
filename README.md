@@ -16,13 +16,13 @@ An android view to represent data over a timeline.
 * Use an android cursor to access the data and register an DataSetObserver to detect changes and automatically refresh the view.
 * Scrolling sound effects.
 * Auto tick label format selection.
-* Auto color scheme generation based on the background color, but also support custom user palette.
-* Various graphical representation (normal bars, stacked bars and side-by-side bars)
+* Auto color scheme generation based on the background color, but also support custom user palettes.
+* Various types of graphical representation (normal bars, stacked bars and side-by-side bars)
 
 
 ### Integration
 
-The library is avalilable at [jcenter](https://bintray.com/bintray/jcenter). You reference inside gradle script with the next snippet of code.
+The library is available at [jcenter](https://bintray.com/bintray/jcenter). You can reference it inside gradle script with the next snippet of code.
 
 ```
 repositories {
@@ -51,7 +51,7 @@ You can use it by adding a *com.ruesga.timelinechart.TimelineChartView* tag to a
     tlc:tlcGraphMode="tlcBarsStack"/>
 ```
 
-After that, just obtain the reference as any other android view and start observing a cursor which contains the next fields (in this order): a long with the timestamp and one or more doubles values (one for every serie to represent int the graph).
+After that, just obtain the reference as any other android view and pass a cursor to let the library to start observing it. The cursor must contains the next fields (in this order): a long with the timestamp and one or more doubles values (one for every serie to represent int the graph).
 ```java
 Cursor cursor = ...
 TimelineChartView mGraph = (TimelineChartView) findViewById(R.id.graph);
@@ -66,7 +66,7 @@ Check out the *sample* directory for a basic usage of the library.
 
 ### Custom Behaviour
 
-You can configure the some of the behaviour at xml style or at runtime. In addition of the javadoc description in the source code, this is a extended enumeration of all available behaviour (check the source code and the sample app to obtain a more detail explanation of every property).
+You can configure the some of the behaviour at xml style or at runtime. In addition of the javadoc description in the source code, following is an extended list of the main available behaviours (check the source code and the sample app to obtain a more detail explanation of every property).
 
 **tlcGraphBackground**: Background color of the graph area. This value also determines the autogereated palette of colors, if no user palette was used. **#setGraphAreaBackground(int)** can be used at runtime to set this color.
 
