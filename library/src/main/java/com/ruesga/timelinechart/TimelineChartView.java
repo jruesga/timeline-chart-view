@@ -1852,11 +1852,14 @@ public class TimelineChartView extends View {
             }
             mInZoomOut = true;
             mZoomAnimator.setFloatValues(MIN_ZOOM_OUT, MAX_ZOOM_OUT);
+            mScroller.forceFinished(true);
             mState = STATE_ZOOMING;
             mZoomAnimator.start();
 
         } else if (notify) {
             // Swap temporary refs
+            mScroller.forceFinished(true);
+            mState = STATE_IDLE;
             swapRefs();
 
             // Update the view and notify
