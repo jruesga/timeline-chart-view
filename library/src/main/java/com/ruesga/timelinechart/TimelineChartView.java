@@ -22,6 +22,7 @@ import android.content.Context;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.content.res.TypedArray;
+import android.database.ContentObserver;
 import android.database.Cursor;
 import android.database.DataSetObserver;
 import android.graphics.Canvas;
@@ -31,6 +32,7 @@ import android.graphics.Path;
 import android.graphics.RectF;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -476,17 +478,55 @@ public class TimelineChartView extends View {
         }
     };
 
+    // Cursor observers
     private final DataSetObserver mDataSetObserver = new DataSetObserver() {
         @Override
         public void onChanged() {
-            reloadCursorData(false);
+            // Avoid this operation if ContentObserver is reloading the cursor
+            if (mObserverStatus != 2) {
+                mObserverStatus = 1;
+                reloadCursorData(false);
+                mObserverStatus = 0;
+            }
         }
 
         @Override
         public void onInvalidated() {
-            clear();
+            // Avoid this operation if ContentObserver is reloading the cursor
+            if (mObserverStatus != 2) {
+                mObserverStatus = 1;
+                clear();
+                mObserverStatus = 0;
+            }
         }
     };
+    private class CursorContentObserver extends ContentObserver {
+        public CursorContentObserver(Handler handler) {
+            super(handler);
+        }
+
+        @Override
+        @SuppressWarnings("deprecation")
+        public void onChange(boolean selfChange) {
+            super.onChange(selfChange);
+            // This required database/disk access so, it must be execute in
+            // a background handler
+            // Avoid this operation if DataSetObserver is reloading the cursor
+            if (mObserverStatus != 1) {
+                mObserverStatus = 2;
+                mCursor.requery();
+                reloadCursorData(false);
+                mObserverStatus = 0;
+            }
+        }
+
+        @Override
+        public void onChange(boolean selfChange, Uri uri) {
+            onChange(selfChange);
+        }
+    }
+    private ContentObserver mContentObserver;
+    private int mObserverStatus = 0;
 
     private final AudioManager mAudioManager;
     private MediaPlayer mSoundEffectMP;
@@ -626,6 +666,10 @@ public class TimelineChartView extends View {
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
         setupBackgroundHandler();
+        mContentObserver = new CursorContentObserver(mBackgroundHandler);
+        if (mCursor != null) {
+            mCursor.registerContentObserver(mContentObserver);
+        }
     }
 
     /** {@inheritDoc} */
@@ -986,6 +1030,9 @@ public class TimelineChartView extends View {
         mOptimizationFlag = flag;
         reloadCursorData(animate);
         mCursor.registerDataSetObserver(mDataSetObserver);
+        if (mContentObserver != null) {
+            mCursor.registerContentObserver(mContentObserver);
+        }
     }
 
     @Override
@@ -2180,6 +2227,9 @@ public class TimelineChartView extends View {
     private void releaseCursor() {
         if (mCursor != null) {
             mCursor.unregisterDataSetObserver(mDataSetObserver);
+            if (mContentObserver != null) {
+                mCursor.unregisterContentObserver(mContentObserver);
+            }
             if (!mCursor.isClosed()) {
                 mCursor.close();
             }
