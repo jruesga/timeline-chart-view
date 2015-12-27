@@ -476,6 +476,18 @@ public class TimelineChartView extends View {
         }
     };
 
+    private final DataSetObserver mDataSetObserver = new DataSetObserver() {
+        @Override
+        public void onChanged() {
+            reloadCursorData(false);
+        }
+
+        @Override
+        public void onInvalidated() {
+            clear();
+        }
+    };
+
     private final AudioManager mAudioManager;
     private MediaPlayer mSoundEffectMP;
 
@@ -627,11 +639,7 @@ public class TimelineChartView extends View {
         mBackgroundHandlerThread = null;
 
         // Destroy cursor
-        if (mCursor != null && !mCursor.isClosed()) {
-            mCursor.close();
-            mSeries = 0;
-            mItem.mSeries = new double[mSeries];
-        }
+        releaseCursor();
 
         // Destroy internal tracking variables
         clear();
@@ -971,27 +979,13 @@ public class TimelineChartView extends View {
 
         // Close previous cursor
         final boolean animate = mCursor != null;
-        if (mCursor != null) {
-            mCursor.close();
-            mSeries = 0;
-            mItem.mSeries = new double[mSeries];
-        }
+        releaseCursor();
 
         // Save the cursor reference and listen for changes
         mCursor = c;
         mOptimizationFlag = flag;
         reloadCursorData(animate);
-        mCursor.registerDataSetObserver(new DataSetObserver() {
-            @Override
-            public void onChanged() {
-                reloadCursorData(false);
-            }
-
-            @Override
-            public void onInvalidated() {
-                clear();
-            }
-        });
+        mCursor.registerDataSetObserver(mDataSetObserver);
     }
 
     @Override
@@ -2180,6 +2174,18 @@ public class TimelineChartView extends View {
         }
         if (mEdgeEffectRight != null) {
             mEdgeEffectRight.onRelease();
+        }
+    }
+
+    private void releaseCursor() {
+        if (mCursor != null) {
+            mCursor.unregisterDataSetObserver(mDataSetObserver);
+            if (!mCursor.isClosed()) {
+                mCursor.close();
+            }
+            mCursor = null;
+            mSeries = 0;
+            mItem.mSeries = new double[mSeries];
         }
     }
 }
