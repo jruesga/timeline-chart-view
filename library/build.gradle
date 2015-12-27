@@ -126,11 +126,14 @@ install {
 }
 
 bintray {
-    def props = new Properties()
-    props.load(new FileInputStream(rootProject.file("release.properties")))
+    def Properties releaseProps = new Properties()
+    releaseProps.load(new FileInputStream(rootProject.file('release.properties')))
 
-    user = props['bintray.user']
-    key = props['bintray.key']
+    def Properties bintrayProps = new Properties()
+    bintrayProps.load(new FileInputStream(new File((String) releaseProps['bintray.config'])))
+
+    user = bintrayProps['bintray.user']
+    key = bintrayProps['bintray.key']
     configurations = ['archives']
     dryRun = false
     publish = true
@@ -151,6 +154,7 @@ bintray {
             vcsTag = versionName
             gpg {
                 sign = true
+                passphrase = bintrayProps['bintray.gpg.passphrase']
             }
         }
     }
