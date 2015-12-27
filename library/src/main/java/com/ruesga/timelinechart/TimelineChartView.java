@@ -994,6 +994,17 @@ public class TimelineChartView extends View {
         });
     }
 
+    @Override
+    public boolean canScrollHorizontally(int direction) {
+        final float x = mScroller.getCurrX();
+        return (direction < 0 && x < mMaxOffset) || (direction > 0 && x > 0);
+    }
+
+    @Override
+    public boolean canScrollVertically(int direction) {
+        return false;
+    }
+
     /** {@inheritDoc} */
     @Override
     public boolean onTouchEvent(final MotionEvent event) {
