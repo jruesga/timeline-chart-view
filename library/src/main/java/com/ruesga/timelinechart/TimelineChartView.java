@@ -687,8 +687,10 @@ public class TimelineChartView extends View {
 
         // Destroy internal tracking variables
         clear();
-        mVelocityTracker.recycle();
-        mVelocityTracker = null;
+        if (mVelocityTracker != null) {
+            mVelocityTracker.recycle();
+            mVelocityTracker = null;
+        }
     }
 
     /** {@inheritDoc} */
