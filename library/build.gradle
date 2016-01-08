@@ -34,7 +34,7 @@ android {
         def outDir = new File(project.buildDir, "out/${variant.name}/")
 
         variant.outputs.each { output ->
-            output.outputFile = new File(outDir, "timeline-chart-view-" + ((String) defaultConfig.versionName) + ".apk")
+            output.outputFile = new File(outDir, "timeline-chart-view-" + ((String) defaultConfig.versionName) + ".aar")
         }
 
         //noinspection GroovyAssignabilityCheck
