@@ -357,7 +357,7 @@ public class TimelineChartView extends View {
     private final RectF mViewArea = new RectF();
     private final RectF mGraphArea = new RectF();
     private final RectF mFooterArea = new RectF();
-    private final float mDefFooterBarHeight;
+    private float mDefFooterBarHeight;
     private float mFooterBarHeight;
     private boolean mShowFooter;
     private int mGraphMode;
@@ -417,9 +417,9 @@ public class TimelineChartView extends View {
     private VelocityTracker mVelocityTracker;
     private OverScroller mScroller;
     private final LongPressDetector mLongPressDetector = new LongPressDetector();
-    private final long mLongPressTimeout;
-    private final float mTouchSlop;
-    private final float mMaxFlingVelocity;
+    private long mLongPressTimeout;
+    private float mTouchSlop;
+    private float mMaxFlingVelocity;
     private long mLastPressTimestamp;
 
     private static final int STATE_IDLE = 0;
@@ -436,7 +436,7 @@ public class TimelineChartView extends View {
     private static final int MSG_COMPUTE_DATA = 4;
     private static final int MSG_UPDATE_COMPUTED_DATA = 5;
 
-    private final Handler mUiHandler;
+    private Handler mUiHandler;
     private Handler mBackgroundHandler;
     private HandlerThread mBackgroundHandlerThread;
 
@@ -528,7 +528,7 @@ public class TimelineChartView extends View {
     private ContentObserver mContentObserver;
     private int mObserverStatus = 0;
 
-    private final AudioManager mAudioManager;
+    private AudioManager mAudioManager;
     private MediaPlayer mSoundEffectMP;
 
     private OnClickItemListener mOnClickItemCallback;
@@ -546,24 +546,28 @@ public class TimelineChartView extends View {
 
     /** {@inheritDoc} */
     public TimelineChartView(Context ctx) {
-        this(ctx, null, 0, 0);
+        this(ctx, null, 0);
     }
 
     /** {@inheritDoc} */
     public TimelineChartView(Context ctx, AttributeSet attrs) {
-        this(ctx, attrs, 0, 0);
+        this(ctx, attrs, 0);
     }
 
     /** {@inheritDoc} */
     public TimelineChartView(Context ctx, AttributeSet attrs, int defStyleAttr) {
-        this(ctx, attrs, defStyleAttr, 0);
+        super(ctx, attrs, defStyleAttr);
+        init(ctx, attrs, defStyleAttr, 0);
     }
 
     /** {@inheritDoc} */
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     public TimelineChartView(Context ctx, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
         super(ctx, attrs, defStyleAttr, defStyleRes);
+        init(ctx, attrs, defStyleAttr, defStyleRes);
+    }
 
+    private void init(Context ctx, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
         mUiHandler = new Handler(Looper.getMainLooper(), mMessenger);
         mAudioManager = (AudioManager) ctx.getSystemService(Context.AUDIO_SERVICE);
 
