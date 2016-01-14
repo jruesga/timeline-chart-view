@@ -150,7 +150,6 @@ bintray {
         version {
             name = versionName
             desc = 'Release v' + versionName
-            released  = new Date()
             vcsTag = versionName
             gpg {
                 sign = true
