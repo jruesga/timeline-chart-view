@@ -2004,6 +2004,9 @@ public class TimelineChartView extends View {
     }
 
     private void checkCursorIntegrity(Cursor c) {
+        if (c.getCount() == 0) {
+            return;
+        }
         int columnCount = c.getColumnCount();
         if (columnCount < 1) {
             throw new IllegalArgumentException("Cursor must have at least 2 columns");
