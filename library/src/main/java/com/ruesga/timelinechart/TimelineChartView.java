@@ -575,7 +575,9 @@ public class TimelineChartView extends View {
 
     private void init(Context ctx, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
         mUiHandler = new Handler(Looper.getMainLooper(), mMessenger);
-        mAudioManager = (AudioManager) ctx.getSystemService(Context.AUDIO_SERVICE);
+        if (!isInEditMode()) {
+            mAudioManager = (AudioManager) ctx.getSystemService(Context.AUDIO_SERVICE);
+        }
 
         final Resources res = getResources();
         final Resources.Theme theme = ctx.getTheme();
@@ -669,6 +671,11 @@ public class TimelineChartView extends View {
         // Initialize the drawing refs (this will be update when we have
         // the real size of the canvas)
         computeBoundAreas();
+
+        // Create a fake data for the edit mode
+        if (isInEditMode()) {
+            setupViewInEditMode();
+        }
     }
 
     /** {@inheritDoc} */
@@ -2223,11 +2230,13 @@ public class TimelineChartView extends View {
     }
 
     private void performSelectionSoundEffect() {
-        if (mPlaySelectionSoundEffect) {
-            if (mSelectionSoundEffectSource == SYSTEM_SOUND_EFFECT) {
-                mAudioManager.playSoundEffect(SoundEffectConstants.CLICK, SOUND_EFFECT_VOLUME);
-            } else {
-                mSoundEffectMP.start();
+        if (!isInEditMode()) {
+            if (mPlaySelectionSoundEffect) {
+                if (mSelectionSoundEffectSource == SYSTEM_SOUND_EFFECT) {
+                    mAudioManager.playSoundEffect(SoundEffectConstants.CLICK, SOUND_EFFECT_VOLUME);
+                } else {
+                    mSoundEffectMP.start();
+                }
             }
         }
     }
@@ -2255,5 +2264,51 @@ public class TimelineChartView extends View {
             mSeries = 0;
             mItem.mSeries = new double[mSeries];
         }
+    }
+
+    private void setupViewInEditMode() {
+        final int[] INDEXES = new int[]{0, 1};
+        mData = new LongSparseArray<>();
+        mData.put(1452639600000L, new Pair<>(new double[]{1867263,2262779}, INDEXES));
+        mData.put(1452726000000L, new Pair<>(new double[]{578273,2871800}, INDEXES));
+        mData.put(1452812400000L, new Pair<>(new double[]{2709,2960491}, INDEXES));
+        mData.put(1452898800000L, new Pair<>(new double[]{1322623,6864896}, INDEXES));
+        mData.put(1452985200000L, new Pair<>(new double[]{1272367,4282328}, INDEXES));
+        mData.put(1453071600000L, new Pair<>(new double[]{115774,7706941}, INDEXES));
+        mData.put(1453158000000L, new Pair<>(new double[]{1920784,3800944}, INDEXES));
+        mData.put(1453244400000L, new Pair<>(new double[]{534265,5978142}, INDEXES));
+        mData.put(1453330800000L, new Pair<>(new double[]{117245,7801457}, INDEXES));
+        mData.put(1453417200000L, new Pair<>(new double[]{430320,5054115}, INDEXES));
+        mData.put(1453503600000L, new Pair<>(new double[]{2461596,8174509}, INDEXES));
+        mData.put(1453590000000L, new Pair<>(new double[]{702240,503133}, INDEXES));
+        mData.put(1453676400000L, new Pair<>(new double[]{1364885,4013798}, INDEXES));
+        mData.put(1453762800000L, new Pair<>(new double[]{1310028,877585}, INDEXES));
+        mData.put(1453849200000L, new Pair<>(new double[]{801779,8092978}, INDEXES));
+        mData.put(1453935600000L, new Pair<>(new double[]{1089847,3678389}, INDEXES));
+        mSeries = 2;
+        mMaxValue = 8174509;
+        //setupSeriesBackground(mGraphAreaBgPaint.getColor());
+        mIsDataComputed = true;
+        mState = STATE_IDLE;
+        mLastTimestamp = -1;
+        mCurrentTimestamp = 1453935600000L;
+
+        int[] palette1 = MaterialPaletteHelper.createMaterialSpectrumPalette(
+                mGraphAreaBgPaint.getColor(), 2);
+        int[] palette2 = MaterialPaletteHelper.createMaterialSpectrumPalette(
+                MaterialPaletteHelper.getComplementaryColor(mGraphAreaBgPaint.getColor()), 2);
+
+        mSeriesBgPaint = new Paint[2];
+        mSeriesBgPaint[0] = new Paint();
+        mSeriesBgPaint[0].setColor(palette1[0]);
+        mSeriesBgPaint[1] = new Paint();
+        mSeriesBgPaint[1].setColor(palette1[1]);
+
+        mHighlightSeriesBgPaint = new Paint[2];
+        mHighlightSeriesBgPaint[0] = new Paint();
+        mHighlightSeriesBgPaint[0].setColor(palette2[0]);
+        mHighlightSeriesBgPaint[1] = new Paint();
+        mHighlightSeriesBgPaint[1].setColor(palette2[1]);
+
     }
 }
