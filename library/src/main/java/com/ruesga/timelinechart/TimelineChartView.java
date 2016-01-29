@@ -440,6 +440,8 @@ public class TimelineChartView extends View {
     private Handler mBackgroundHandler;
     private HandlerThread mBackgroundHandlerThread;
 
+    private boolean mIsDataComputed;
+
     private final Handler.Callback mMessenger = new Handler.Callback() {
         @Override
         public boolean handleMessage(Message msg) {
@@ -457,6 +459,7 @@ public class TimelineChartView extends View {
                 case MSG_UPDATE_COMPUTED_DATA:
                     // Generate bar items palette based on background color
                     setupSeriesBackground(mGraphAreaBgPaint.getColor());
+                    mIsDataComputed = true;
 
                     // Redraw the data and notify the changes
                     notifyOnSelectionItemChanged(false);
@@ -467,6 +470,9 @@ public class TimelineChartView extends View {
                         mZoomAnimator.setFloatValues(MAX_ZOOM_OUT, MIN_ZOOM_OUT);
                         mZoomAnimator.start();
                     }
+
+                    // Update the graph view
+                    ViewCompat.postInvalidateOnAnimation(TimelineChartView.this);
                     return true;
 
                 // Non-Ui thread
@@ -1471,7 +1477,7 @@ public class TimelineChartView extends View {
             maxValue = mMaxValue;
         }
         boolean hasData = data.size() > 0;
-        if (hasData) {
+        if (hasData && mIsDataComputed) {
             // 3.- Compute viewport and draw the data
             computeItemsOnScreen(data);
             drawBarItems(c, data, maxValue);
