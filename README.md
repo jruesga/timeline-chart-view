@@ -31,7 +31,7 @@ repositories {
 }
 
 dependencies {
-    compile 'com.ruesga.timeline-chart-view:timeline-chart-view:0.0.2'
+    compile 'com.ruesga.timeline-chart-view:timeline-chart-view:0.0.3'
 }
 ```
 
@@ -42,7 +42,7 @@ repositories {
 }
 
 dependencies {
-    compile 'com.ruesga.timeline-chart-view:timeline-chart-view:0.0.2'
+    compile 'com.ruesga.timeline-chart-view:timeline-chart-view:0.0.3'
 }
 ```
 
