@@ -1351,7 +1351,7 @@ public class TimelineChartView extends View {
 
         // So we are in an bar area, so we have a valid index
         final int index = size - ((int) Math.ceil((offset - (mBarItemWidth / 2)) / mBarWidth));
-        if (index == -1) {
+        if (index == -1 || index >= data.size()) {
             return null;
         }
         final Pair<double[], int[]> o = data.valueAt(index);
