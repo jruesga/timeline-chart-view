@@ -52,6 +52,7 @@ import android.text.style.AbsoluteSizeSpan;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.util.SparseArray;
 import android.util.TypedValue;
 import android.view.MotionEvent;
 import android.view.SoundEffectConstants;
@@ -408,7 +409,7 @@ public class TimelineChartView extends View {
     private SimpleDateFormat[] mTickFormatter;
     private Date mTickDate;
     private StringBuilder mTickText;
-    private DynamicSpannableString[] mTickTextSpannables;
+    private SparseArray<DynamicSpannableString>[] mTickTextSpannables;
     private DynamicLayout[] mTickTextLayouts;
     private Calendar mTickCalendar;
     private boolean mTickHasDayFormat;
@@ -1608,7 +1609,17 @@ public class TimelineChartView extends View {
                     .replace(".", "")
                     .toUpperCase(Locale.getDefault());
             mTickText.replace(0, mTickText.length(), text);
-            mTickTextSpannables[tickFormat].update(mTickText);
+            DynamicSpannableString spannable =
+                    mTickTextSpannables[tickFormat].get(mTickText.length());
+            if (spannable == null) {
+                // If we don't have an spannable for the text length, create a new one
+                // that allow to use it now and in the future. Doing this here (on draw)
+                // is not the best, but it supposed to only be performed one time per
+                // different tick text length
+                spannable = new DynamicSpannableString(mTickText);
+                mTickTextSpannables[tickFormat].put(mTickText.length(), spannable);
+            }
+            spannable.update(mTickText);
 
             // Calculate the x position and draw the layout
             final float x = cx + mCurrentOffset - (mBarWidth * (size - i))
@@ -1737,6 +1748,7 @@ public class TimelineChartView extends View {
         }
     }
 
+    @SuppressWarnings("unchecked")
     private void setupTickLabels() {
         synchronized (mLock) {
             mTickCalendar = Calendar.getInstance(TimeZone.getDefault(), Locale.getDefault());
@@ -1755,7 +1767,7 @@ public class TimelineChartView extends View {
             int count = formats.length;
             mTickTextLayouts = new DynamicLayout[count];
             mTickFormatter = new SimpleDateFormat[count];
-            mTickTextSpannables = new DynamicSpannableString[count];
+            mTickTextSpannables = new SparseArray[count];
             for (int i = 0; i < count; i++) {
                 mTickFormatter[i] = new SimpleDateFormat(formats[i], Locale.getDefault());
                 mTickDate.setTime(Long.valueOf(values[i]));
@@ -1763,17 +1775,22 @@ public class TimelineChartView extends View {
                         .replace(".", "")
                         .toUpperCase(Locale.getDefault());
                 mTickText = new StringBuilder(text);
-                mTickTextSpannables[i] = new DynamicSpannableString(mTickText);
+                mTickTextSpannables[i] = new SparseArray<>();
+
+                // Store spannable in memory based in its length, so we don't have to rebuild
+                // a every time, just only in case they are needed (normally never)
+                DynamicSpannableString spannable = new DynamicSpannableString(mTickText);
+                mTickTextSpannables[i].put(mTickText.length(), spannable);
                 if (i == (count - 1)) {
-                    mTickTextSpannables[i].setSpan(new AbsoluteSizeSpan(
+                    spannable.setSpan(new AbsoluteSizeSpan(
                             (int) (size20 * textSizeFactor)), 0, 2,
                             Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 } else if (i == 1) {
-                    mTickTextSpannables[i].setSpan(new AbsoluteSizeSpan(
+                    spannable.setSpan(new AbsoluteSizeSpan(
                             (int) (size12 * textSizeFactor)), 0, text.length(),
                             Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 }
-                mTickTextLayouts[i] = new DynamicLayout(mTickTextSpannables[i], mTickLabelFgPaint,
+                mTickTextLayouts[i] = new DynamicLayout(spannable, mTickLabelFgPaint,
                         (int) mBarItemWidth, Layout.Alignment.ALIGN_CENTER, 1.0f, 1.0f, false);
             }
 
