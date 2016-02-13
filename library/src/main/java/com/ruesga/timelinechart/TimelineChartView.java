@@ -1044,6 +1044,9 @@ public class TimelineChartView extends View {
         final boolean animate = mCursor != null;
         releaseCursor();
 
+        // Ensure we have a valid handler (if for some reason view wasn't attached yet)
+        setupBackgroundHandler();
+
         // Save the cursor reference and listen for changes
         mCursor = c;
         mOptimizationFlag = flag;
@@ -1725,7 +1728,7 @@ public class TimelineChartView extends View {
         mCurrentPositionIndicatorHeight = mBarItemWidth / 4f;
     }
 
-    private void setupBackgroundHandler() {
+    private synchronized void setupBackgroundHandler() {
         if (mBackgroundHandler == null) {
             // Create a background thread
             mBackgroundHandlerThread = new HandlerThread(TAG + "BackgroundThread");
