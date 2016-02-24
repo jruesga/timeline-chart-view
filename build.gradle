@@ -48,7 +48,7 @@ subprojects {
     }
 
     ext {
-        supportVersion = '23.1.1'
+        supportVersion = '23.2.0'
         versionName = '0.0.5'
     }
 }
