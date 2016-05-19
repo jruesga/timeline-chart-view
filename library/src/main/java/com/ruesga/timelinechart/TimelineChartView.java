@@ -1921,7 +1921,7 @@ public class TimelineChartView extends View {
         //    and additions will happen
         //  ONLY_ADDITIONS_OPTIMIZATION: Internal is preserve, and only additions are accounted
 
-        if (!mCursor.isClosed() && mCursor.moveToFirst()) {
+        if (mCursor != null && !mCursor.isClosed() && mCursor.moveToFirst()) {
             // Load the cursor to memory
             boolean hasDayFormat = false;
             double max = 0d;
