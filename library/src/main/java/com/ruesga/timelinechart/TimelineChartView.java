@@ -684,6 +684,7 @@ public class TimelineChartView extends View {
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
         setupBackgroundHandler();
+        setupSoundEffects();
         mContentObserver = new CursorContentObserver(mBackgroundHandler);
         if (mCursor != null) {
             mCursor.registerContentObserver(mContentObserver);
@@ -705,6 +706,7 @@ public class TimelineChartView extends View {
 
         // Destroy internal tracking variables
         clear();
+        releaseSoundEffects();
         if (mVelocityTracker != null) {
             mVelocityTracker.recycle();
             mVelocityTracker = null;
@@ -1829,12 +1831,16 @@ public class TimelineChartView extends View {
                 mSoundEffectMP.setVolume(SOUND_EFFECT_VOLUME, SOUND_EFFECT_VOLUME);
             }
         } else if (mSoundEffectMP != null) {
-            if (mSoundEffectMP.isPlaying()) {
-                mSoundEffectMP.stop();
-            }
-            mSoundEffectMP.release();
-            mSoundEffectMP = null;
+            releaseSoundEffects();
         }
+    }
+
+    private void releaseSoundEffects() {
+        if (mSoundEffectMP.isPlaying()) {
+            mSoundEffectMP.stop();
+        }
+        mSoundEffectMP.release();
+        mSoundEffectMP = null;
     }
 
     private void setupAnimators() {
