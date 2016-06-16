@@ -25,24 +25,30 @@ An android view to represent data over a timeline.
 The library is available at [jcenter](https://jcenter.bintray.com/com/ruesga/timeline-chart-view/timeline-chart-view/) and [maven central](https://repo1.maven.org/maven2/com/ruesga/timeline-chart-view/timeline-chart-view/). You can reference it inside gradle script with the next snippets of code.
 
 **jcenter**
+
+[![Bintray](https://img.shields.io/bintray/v/jruesga/maven/timeline-chart-view.svg?maxAge=2592000)](https://bintray.com/jruesga/maven/timeline-chart-view/_latestVersion)
+
 ```
 repositories {
     jcenter()
 }
 
 dependencies {
-    compile 'com.ruesga.timeline-chart-view:timeline-chart-view:0.0.7'
+    compile 'com.ruesga.timeline-chart-view:timeline-chart-view:0.0.8'
 }
 ```
 
 **maven central**
+
+[![Bintray](https://img.shields.io/maven-central/v/com.ruesga.timeline-chart-view/timeline-chart-view.svg?maxAge=2592000)](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22com.ruesga.timeline-chart-view%22%20AND%20a%3A%22timeline-chart-view%22)
+
 ```
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    compile 'com.ruesga.timeline-chart-view:timeline-chart-view:0.0.7'
+    compile 'com.ruesga.timeline-chart-view:timeline-chart-view:0.0.8'
 }
 ```
 
