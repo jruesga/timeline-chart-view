@@ -20,7 +20,7 @@ allprojects {
             jcenter()
         }
         dependencies {
-            classpath 'com.android.tools.build:gradle:2.1.0'
+            classpath 'com.android.tools.build:gradle:2.1.2'
         }
     }
 
@@ -33,12 +33,12 @@ subprojects {
     afterEvaluate {project ->
         if (project.hasProperty("android")) {
             android {
-                compileSdkVersion 23
-                buildToolsVersion '23.0.3'
+                compileSdkVersion 24
+                buildToolsVersion '24.0.0'
 
                 defaultConfig {
                     minSdkVersion 15
-                    targetSdkVersion 23
+                    targetSdkVersion 24
 
                     versionCode = 8
                     versionName = rootProject.subprojects.ext.versionName[0]
@@ -48,7 +48,7 @@ subprojects {
     }
 
     ext {
-        supportVersion = '23.4.0'
+        supportVersion = '24.0.0'
         versionName = '0.0.8'
     }
 }
