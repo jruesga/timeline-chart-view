@@ -410,10 +410,18 @@ public class TimelineChartView extends View {
     private Date mTickDate;
     private StringBuilder mTickText;
     private SparseArray<DynamicSpannableString>[] mTickTextSpannables;
-    private DynamicLayout[] mTickTextLayouts;
+    private  SparseArray<DynamicLayout>[] mTickTextLayouts;
     private Calendar mTickCalendar;
     private boolean mTickHasDayFormat;
     private float mTickLabelMinHeight;
+
+    private String[] mTickLabels;
+    private String[] mTickFormats;
+
+    private float mTextSizeFactor;
+    private float mSize8;
+    private float mSize12;
+    private float mSize20;
 
     private VelocityTracker mVelocityTracker;
     private OverScroller mScroller;
@@ -582,6 +590,14 @@ public class TimelineChartView extends View {
 
         final Resources res = getResources();
         final Resources.Theme theme = ctx.getTheme();
+
+        mTickFormats = getResources().getStringArray(R.array.tlcDefTickLabelFormats);
+        mTickLabels = getResources().getStringArray(R.array.tlcDefTickLabelValues);
+
+        final DisplayMetrics dp = getResources().getDisplayMetrics();
+        mSize8 = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 8, dp);
+        mSize12 = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 12, dp);
+        mSize20 = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 20, dp);
 
         final ViewConfiguration vc = ViewConfiguration.get(ctx);
         mLongPressTimeout = ViewConfiguration.getLongPressTimeout();
@@ -1605,7 +1621,6 @@ public class TimelineChartView extends View {
             // Update the dynamic layout
             long timestamp = data.keyAt(i);
             final int tickFormat = getTickLabelFormat(timestamp);
-            final DynamicLayout layout = mTickTextLayouts[tickFormat];
             mTickDate.setTime(timestamp);
             final String text = mTickFormatter[tickFormat].format(mTickDate)
                     .replace(".", "")
@@ -1618,10 +1633,18 @@ public class TimelineChartView extends View {
                 // that allow to use it now and in the future. Doing this here (on draw)
                 // is not the best, but it supposed to only be performed one time per
                 // different tick text length
-                spannable = new DynamicSpannableString(mTickText);
+                spannable = createSpannableTick(tickFormat, mTickText);
                 mTickTextSpannables[tickFormat].put(mTickText.length(), spannable);
             }
             spannable.update(mTickText);
+
+            DynamicLayout layout = mTickTextLayouts[tickFormat].get(mTickText.length());
+            if (layout == null) {
+                // Update the layout as well
+                layout = new DynamicLayout(spannable, mTickLabelFgPaint,
+                        (int) mBarItemWidth, Layout.Alignment.ALIGN_CENTER, 1.0f, 1.0f, false);
+                mTickTextLayouts[tickFormat].put(mTickText.length(), layout);
+            }
 
             // Calculate the x position and draw the layout
             final float x = cx + mCurrentOffset - (mBarWidth * (size - i))
@@ -1754,52 +1777,54 @@ public class TimelineChartView extends View {
     private void setupTickLabels() {
         synchronized (mLock) {
             mTickCalendar = Calendar.getInstance(TimeZone.getDefault(), Locale.getDefault());
-            final float textSizeFactor = mFooterBarHeight / mDefFooterBarHeight;
-            final DisplayMetrics dp = getResources().getDisplayMetrics();
-            final float size8 = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 8, dp);
-            final float size12 = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 12, dp);
-            final float size20 = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 20, dp);
 
-            mTickLabelFgPaint.setTextSize((int) (size8 * textSizeFactor));
+            mTextSizeFactor = mFooterBarHeight / mDefFooterBarHeight;
+            mTickLabelFgPaint.setTextSize((int) (mSize8 * mTextSizeFactor));
 
-            final String[] formats = getResources().getStringArray(R.array.tlcDefTickLabelFormats);
-            final String[] values = getResources().getStringArray(R.array.tlcDefTickLabelValues);
             mTickDate = new Date();
 
-            int count = formats.length;
-            mTickTextLayouts = new DynamicLayout[count];
+            int count = mTickFormats.length;
+            mTickTextLayouts = new SparseArray[count];
             mTickFormatter = new SimpleDateFormat[count];
             mTickTextSpannables = new SparseArray[count];
             for (int i = 0; i < count; i++) {
-                mTickFormatter[i] = new SimpleDateFormat(formats[i], Locale.getDefault());
-                mTickDate.setTime(Long.valueOf(values[i]));
+                mTickFormatter[i] = new SimpleDateFormat(mTickFormats[i], Locale.getDefault());
+                mTickDate.setTime(Long.valueOf(mTickLabels[i]));
                 final String text = mTickFormatter[i].format(mTickDate)
                         .replace(".", "")
                         .toUpperCase(Locale.getDefault());
                 mTickText = new StringBuilder(text);
                 mTickTextSpannables[i] = new SparseArray<>();
+                mTickTextLayouts[i] = new SparseArray<>();
 
                 // Store spannable in memory based in its length, so we don't have to rebuild
                 // a every time, just only in case they are needed (normally never)
-                DynamicSpannableString spannable = new DynamicSpannableString(mTickText);
-                mTickTextSpannables[i].put(mTickText.length(), spannable);
-                if (i == (count - 1)) {
-                    spannable.setSpan(new AbsoluteSizeSpan(
-                            (int) (size20 * textSizeFactor)), 0, 2,
-                            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                } else if (i == 1) {
-                    spannable.setSpan(new AbsoluteSizeSpan(
-                            (int) (size12 * textSizeFactor)), 0, text.length(),
-                            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                }
-                mTickTextLayouts[i] = new DynamicLayout(spannable, mTickLabelFgPaint,
-                        (int) mBarItemWidth, Layout.Alignment.ALIGN_CENTER, 1.0f, 1.0f, false);
+                DynamicSpannableString spannable = createSpannableTick(i, mTickText);
+                mTickTextLayouts[i].put(mTickText.length(),
+                        new DynamicLayout(spannable, mTickLabelFgPaint,
+                            (int) mBarItemWidth, Layout.Alignment.ALIGN_CENTER, 1.0f, 1.0f, false));
             }
 
             // Save min height
             mTickLabelMinHeight = mTickTextLayouts[
-                    mTickHasDayFormat ? mTickTextLayouts.length - 1 : 0].getHeight();
+                    mTickHasDayFormat ? mTickTextLayouts.length - 1 : 0]
+                        .get(mTickText.length()).getHeight();
         }
+    }
+
+    private DynamicSpannableString createSpannableTick(int tickFormat, CharSequence text) {
+        DynamicSpannableString spannable = new DynamicSpannableString(text);
+        mTickTextSpannables[tickFormat].put(text.length(), spannable);
+        if (tickFormat == (mTickFormats.length - 1)) {
+            spannable.setSpan(new AbsoluteSizeSpan(
+                            (int) (mSize20 * mTextSizeFactor)), 0, 2,
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        } else if (tickFormat == 1) {
+            spannable.setSpan(new AbsoluteSizeSpan(
+                            (int) (mSize12 * mTextSizeFactor)), 0, text.length(),
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+        return spannable;
     }
 
     private void setupEdgeEffects() {
@@ -2229,10 +2254,14 @@ public class TimelineChartView extends View {
         }
         if (mTickTextLayouts != null) {
             float minWidth = 0.f;
-            for (DynamicLayout layout : mTickTextLayouts) {
-                final float width = layout.getWidth();
-                if (minWidth < width) {
-                    minWidth = width;
+            for (SparseArray<DynamicLayout> a : mTickTextLayouts) {
+                int count = a.size();
+                for (int i = 0; i < count; i++) {
+                    DynamicLayout layout = a.valueAt(i);
+                    final float width = layout.getWidth();
+                    if (minWidth < width) {
+                        minWidth = width;
+                    }
                 }
             }
             if (minWidth > mBarItemWidth) {
