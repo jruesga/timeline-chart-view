@@ -529,7 +529,9 @@ public class TimelineChartView extends View {
             // Avoid this operation if DataSetObserver is reloading the cursor
             if (mObserverStatus != 1) {
                 mObserverStatus = 2;
-                mCursor.requery();
+                synchronized (mCursorLock) {
+                    mCursor.requery();
+                }
                 reloadCursorData(false);
                 mObserverStatus = 0;
             }
@@ -557,6 +559,7 @@ public class TimelineChartView extends View {
     private ValueAnimator mZoomAnimator;
 
     private final Object mLock = new Object();
+    private final Object mCursorLock = new Object();
 
 
     /** {@inheritDoc} */
@@ -702,8 +705,10 @@ public class TimelineChartView extends View {
         setupBackgroundHandler();
         setupSoundEffects();
         mContentObserver = new CursorContentObserver(mBackgroundHandler);
-        if (mCursor != null) {
-            mCursor.registerContentObserver(mContentObserver);
+        synchronized (mCursorLock) {
+            if (mCursor != null) {
+                mCursor.registerContentObserver(mContentObserver);
+            }
         }
     }
 
@@ -1057,22 +1062,24 @@ public class TimelineChartView extends View {
      * @see {@link #ONLY_ADDITIONS_OPTIMIZATION}
      */
     public void observeData(Cursor c, int flag) {
-        checkCursorIntegrity(c);
+        synchronized (mCursorLock) {
+            checkCursorIntegrity(c);
 
-        // Close previous cursor
-        final boolean animate = mCursor != null;
-        releaseCursor();
+            // Close previous cursor
+            final boolean animate = mCursor != null;
+            releaseCursor();
 
-        // Ensure we have a valid handler (if for some reason view wasn't attached yet)
-        setupBackgroundHandler();
+            // Ensure we have a valid handler (if for some reason view wasn't attached yet)
+            setupBackgroundHandler();
 
-        // Save the cursor reference and listen for changes
-        mCursor = c;
-        mOptimizationFlag = flag;
-        reloadCursorData(animate);
-        mCursor.registerDataSetObserver(mDataSetObserver);
-        if (mContentObserver != null) {
-            mCursor.registerContentObserver(mContentObserver);
+            // Save the cursor reference and listen for changes
+            mCursor = c;
+            mOptimizationFlag = flag;
+            reloadCursorData(animate);
+            mCursor.registerDataSetObserver(mDataSetObserver);
+            if (mContentObserver != null) {
+                mCursor.registerContentObserver(mContentObserver);
+            }
         }
     }
 
@@ -1951,105 +1958,106 @@ public class TimelineChartView extends View {
         //  NO_DELETES_OPTIMIZATION: Internal can be preserve and only updates
         //    and additions will happen
         //  ONLY_ADDITIONS_OPTIMIZATION: Internal is preserve, and only additions are accounted
-
-        if (mCursor != null && !mCursor.isClosed() && mCursor.moveToFirst()) {
-            // Load the cursor to memory
-            boolean hasDayFormat = false;
-            double max = 0d;
-            final LongSparseArray<Pair<double[], int[]>> data;
-            // Clone the data if we optimization flag allow it.
-            if (mOptimizationFlag != NO_OPTIMIZATION) {
-                data = cloneCurrentData(mCursor.getCount());
-            } else {
-                data = new LongSparseArray<>(mCursor.getCount());
-            }
-
-            int series = mCursor.getColumnCount() - 1;
-            if (mItem.mSeries == null || mItem.mSeries.length != series) {
-                mItem.mSeries = new double[series];
-            }
-
-            long lastTimestamp = -1;
-            if (mOptimizationFlag == ONLY_ADDITIONS_OPTIMIZATION) {
-                hasDayFormat = mTickHasDayFormat;
-                max = mMaxValue;
-                mCursor.moveToLast();
-                if (data.size() > 0) {
-                    lastTimestamp = data.keyAt(data.size() - 1);
-                }
-            }
-
-            // Extract the data from the cursor applying the current optimization flag.
-            int lastTickLabelFormat = -1;
-            do {
-                long timestamp = mCursor.getLong(0);
-                if (timestamp == lastTimestamp
-                        && mOptimizationFlag == ONLY_ADDITIONS_OPTIMIZATION) {
-                    break;
-                }
-
-                // Determine the best tick vertical alignment
-                final int tickLabelFormat = getTickLabelFormat(timestamp);
-                if (tickLabelFormat == TICK_LABEL_DAY_FORMAT ||
-                        (lastTickLabelFormat != -1 && lastTickLabelFormat != tickLabelFormat)) {
-                    hasDayFormat = true;
-                }
-                lastTickLabelFormat = tickLabelFormat;
-
-                final double[] seriesData;
-                final int[] indexes;
-                if (mOptimizationFlag == NO_OPTIMIZATION) {
-                    seriesData = new double[series];
-                    indexes = new int[series];
+        synchronized (mCursorLock) {
+            if (mCursor != null && !mCursor.isClosed() && mCursor.moveToFirst()) {
+                // Load the cursor to memory
+                boolean hasDayFormat = false;
+                double max = 0d;
+                final LongSparseArray<Pair<double[], int[]>> data;
+                // Clone the data if we optimization flag allow it.
+                if (mOptimizationFlag != NO_OPTIMIZATION) {
+                    data = cloneCurrentData(mCursor.getCount());
                 } else {
-                    Pair<double[], int[]> v = data.get(timestamp);
-                    if (v != null) {
-                        seriesData = v.first;
-                        indexes = v.second;
-                    } else {
+                    data = new LongSparseArray<>(mCursor.getCount());
+                }
+
+                int series = mCursor.getColumnCount() - 1;
+                if (mItem.mSeries == null || mItem.mSeries.length != series) {
+                    mItem.mSeries = new double[series];
+                }
+
+                long lastTimestamp = -1;
+                if (mOptimizationFlag == ONLY_ADDITIONS_OPTIMIZATION) {
+                    hasDayFormat = mTickHasDayFormat;
+                    max = mMaxValue;
+                    mCursor.moveToLast();
+                    if (data.size() > 0) {
+                        lastTimestamp = data.keyAt(data.size() - 1);
+                    }
+                }
+
+                // Extract the data from the cursor applying the current optimization flag.
+                int lastTickLabelFormat = -1;
+                do {
+                    long timestamp = mCursor.getLong(0);
+                    if (timestamp == lastTimestamp
+                            && mOptimizationFlag == ONLY_ADDITIONS_OPTIMIZATION) {
+                        break;
+                    }
+
+                    // Determine the best tick vertical alignment
+                    final int tickLabelFormat = getTickLabelFormat(timestamp);
+                    if (tickLabelFormat == TICK_LABEL_DAY_FORMAT ||
+                            (lastTickLabelFormat != -1 && lastTickLabelFormat != tickLabelFormat)) {
+                        hasDayFormat = true;
+                    }
+                    lastTickLabelFormat = tickLabelFormat;
+
+                    final double[] seriesData;
+                    final int[] indexes;
+                    if (mOptimizationFlag == NO_OPTIMIZATION) {
                         seriesData = new double[series];
                         indexes = new int[series];
-                    }
-                }
-                double stackVal = 0d;
-                for (int i = 0; i < series; i++) {
-                    final double v = mCursor.getDouble(i + 1);
-                    seriesData[i] = v;
-                    if (mGraphMode != GRAPH_MODE_BARS_STACK && v > max) {
-                        max = v;
                     } else {
-                        stackVal += v;
+                        Pair<double[], int[]> v = data.get(timestamp);
+                        if (v != null) {
+                            seriesData = v.first;
+                            indexes = v.second;
+                        } else {
+                            seriesData = new double[series];
+                            indexes = new int[series];
+                        }
                     }
-                    indexes[i] = i;
-                }
-                if (mGraphMode == GRAPH_MODE_BARS_STACK && stackVal > max) {
-                    max = stackVal;
-                }
+                    double stackVal = 0d;
+                    for (int i = 0; i < series; i++) {
+                        final double v = mCursor.getDouble(i + 1);
+                        seriesData[i] = v;
+                        if (mGraphMode != GRAPH_MODE_BARS_STACK && v > max) {
+                            max = v;
+                        } else {
+                            stackVal += v;
+                        }
+                        indexes[i] = i;
+                    }
+                    if (mGraphMode == GRAPH_MODE_BARS_STACK && stackVal > max) {
+                        max = stackVal;
+                    }
 
-                // Sort the items to properly one over other in screen
-                if (mGraphMode == GRAPH_MODE_BARS) {
-                    ArraysHelper.sort(seriesData, indexes);
+                    // Sort the items to properly one over other in screen
+                    if (mGraphMode == GRAPH_MODE_BARS) {
+                        ArraysHelper.sort(seriesData, indexes);
+                    }
+                    Pair<double[], int[]> pair = new Pair<>(seriesData, indexes);
+                    data.put(timestamp, pair);
+                } while (mOptimizationFlag == ONLY_ADDITIONS_OPTIMIZATION
+                        ? mCursor.moveToPrevious() : mCursor.moveToNext());
+
+                // Calculate the max available offset
+                int size = data.size() - 1;
+                float maxOffset = mBarWidth * size;
+
+                //swap data
+                synchronized (mLock) {
+                    mSeriesSwap = series;
+                    mDataSwap = data;
+                    mMaxValueSwap = max;
+                    mMaxOffsetSwap = maxOffset;
+                    mTickHasDayFormatSwap = hasDayFormat;
                 }
-                Pair<double[], int[]> pair = new Pair<>(seriesData, indexes);
-                data.put(timestamp, pair);
-            } while (mOptimizationFlag == ONLY_ADDITIONS_OPTIMIZATION
-                    ? mCursor.moveToPrevious() : mCursor.moveToNext());
-
-            // Calculate the max available offset
-            int size = data.size() - 1;
-            float maxOffset = mBarWidth * size;
-
-            //swap data
-            synchronized (mLock) {
-                mSeriesSwap = series;
-                mDataSwap = data;
-                mMaxValueSwap = max;
-                mMaxOffsetSwap = maxOffset;
-                mTickHasDayFormatSwap = hasDayFormat;
+            } else {
+                // Cursor is empty or closed
+                clearSwapRefs();
             }
-        } else {
-            // Cursor is empty or closed
-            clearSwapRefs();
         }
     }
 
@@ -2310,17 +2318,19 @@ public class TimelineChartView extends View {
     }
 
     private void releaseCursor() {
-        if (mCursor != null) {
-            mCursor.unregisterDataSetObserver(mDataSetObserver);
-            if (mContentObserver != null) {
-                mCursor.unregisterContentObserver(mContentObserver);
+        synchronized (mCursorLock) {
+            if (mCursor != null) {
+                mCursor.unregisterDataSetObserver(mDataSetObserver);
+                if (mContentObserver != null) {
+                    mCursor.unregisterContentObserver(mContentObserver);
+                }
+                if (!mCursor.isClosed()) {
+                    mCursor.close();
+                }
+                mCursor = null;
+                mSeries = 0;
+                mItem.mSeries = new double[mSeries];
             }
-            if (!mCursor.isClosed()) {
-                mCursor.close();
-            }
-            mCursor = null;
-            mSeries = 0;
-            mItem.mSeries = new double[mSeries];
         }
     }
 
