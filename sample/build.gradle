@@ -1,6 +1,7 @@
 apply plugin: 'com.android.application'
 
 def supportVersion = rootProject.subprojects.ext.supportVersion[0]
+def appName = "TimelineChart View Sample"
 
 dependencies {
     compile 'com.android.support:support-v4:' + supportVersion
@@ -14,7 +15,6 @@ android {
     defaultConfig {
         applicationId "com.ruesga.timelinechart.sample"
 
-        set("appName", "TimelineChart View Sample")
-        resValue "string", "app_name", android.defaultConfig.appName
+        resValue "string", "app_name", appName
     }
 }
