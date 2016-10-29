@@ -1,6 +1,11 @@
 Change Log
 ==========
 
+Version 1.0.1 *(2016-10-29)*
+----------------------------
+
+ * Fix a NPE bug with setting up tick labels
+
 Version 1.0.0 *(2016-10-22)*
 ----------------------------
 
