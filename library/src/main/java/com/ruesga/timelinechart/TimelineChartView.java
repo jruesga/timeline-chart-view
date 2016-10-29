@@ -408,9 +408,8 @@ public class TimelineChartView extends View {
 
     private SimpleDateFormat[] mTickFormatter;
     private Date mTickDate;
-    private StringBuilder mTickText;
     private SparseArray<DynamicSpannableString>[] mTickTextSpannables;
-    private  SparseArray<DynamicLayout>[] mTickTextLayouts;
+    private SparseArray<DynamicLayout>[] mTickTextLayouts;
     private Calendar mTickCalendar;
     private boolean mTickHasDayFormat;
     private float mTickLabelMinHeight;
@@ -1632,25 +1631,24 @@ public class TimelineChartView extends View {
             final String text = mTickFormatter[tickFormat].format(mTickDate)
                     .replace(".", "")
                     .toUpperCase(Locale.getDefault());
-            mTickText.replace(0, mTickText.length(), text);
             DynamicSpannableString spannable =
-                    mTickTextSpannables[tickFormat].get(mTickText.length());
+                    mTickTextSpannables[tickFormat].get(text.length());
             if (spannable == null) {
                 // If we don't have an spannable for the text length, create a new one
                 // that allow to use it now and in the future. Doing this here (on draw)
                 // is not the best, but it supposed to only be performed one time per
                 // different tick text length
-                spannable = createSpannableTick(tickFormat, mTickText);
-                mTickTextSpannables[tickFormat].put(mTickText.length(), spannable);
+                spannable = createSpannableTick(tickFormat, text);
+                mTickTextSpannables[tickFormat].put(text.length(), spannable);
             }
-            spannable.update(mTickText);
+            spannable.update(text);
 
-            DynamicLayout layout = mTickTextLayouts[tickFormat].get(mTickText.length());
+            DynamicLayout layout = mTickTextLayouts[tickFormat].get(text.length());
             if (layout == null) {
                 // Update the layout as well
                 layout = new DynamicLayout(spannable, mTickLabelFgPaint,
                         (int) mBarItemWidth, Layout.Alignment.ALIGN_CENTER, 1.0f, 1.0f, false);
-                mTickTextLayouts[tickFormat].put(mTickText.length(), layout);
+                mTickTextLayouts[tickFormat].put(text.length(), layout);
             }
 
             // Calculate the x position and draw the layout
@@ -1800,22 +1798,20 @@ public class TimelineChartView extends View {
                 final String text = mTickFormatter[i].format(mTickDate)
                         .replace(".", "")
                         .toUpperCase(Locale.getDefault());
-                mTickText = new StringBuilder(text);
                 mTickTextSpannables[i] = new SparseArray<>();
                 mTickTextLayouts[i] = new SparseArray<>();
 
                 // Store spannable in memory based in its length, so we don't have to rebuild
                 // a every time, just only in case they are needed (normally never)
-                DynamicSpannableString spannable = createSpannableTick(i, mTickText);
-                mTickTextLayouts[i].put(mTickText.length(),
+                DynamicSpannableString spannable = createSpannableTick(i, text);
+                mTickTextLayouts[i].put(text.length(),
                         new DynamicLayout(spannable, mTickLabelFgPaint,
                             (int) mBarItemWidth, Layout.Alignment.ALIGN_CENTER, 1.0f, 1.0f, false));
-            }
 
-            // Save min height
-            mTickLabelMinHeight = mTickTextLayouts[
-                    mTickHasDayFormat ? mTickTextLayouts.length - 1 : 0]
-                        .get(mTickText.length()).getHeight();
+                // Save min height
+                mTickLabelMinHeight = Math.max(
+                        mTickLabelMinHeight, mTickTextLayouts[i].get(text.length()).getHeight());
+            }
         }
     }
 
