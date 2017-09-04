@@ -126,34 +126,36 @@ install {
 }
 
 bintray {
-    def Properties releaseProps = new Properties()
-    releaseProps.load(new FileInputStream(rootProject.file('release.properties')))
+    if (rootProject.file('release.properties').exists()) {
+        def Properties releaseProps = new Properties()
+        releaseProps.load(new FileInputStream(rootProject.file('release.properties')))
 
-    def Properties bintrayProps = new Properties()
-    bintrayProps.load(new FileInputStream(new File((String) releaseProps['bintray.config'])))
+        def Properties bintrayProps = new Properties()
+        bintrayProps.load(new FileInputStream(new File((String) releaseProps['bintray.config'])))
 
-    user = bintrayProps['bintray.user']
-    key = bintrayProps['bintray.key']
-    configurations = ['archives']
-    dryRun = false
-    publish = true
-    pkg {
-        repo = 'maven'
-        name = 'timeline-chart-view'
-        desc = 'An android view to represent data over a timeline.'
-        websiteUrl = 'https://github.com/jruesga/timeline-chart-view'
-        issueTrackerUrl = 'https://github.com/jruesga/timeline-chart-view/issues'
-        vcsUrl = 'https://github.com/jruesga/timeline-chart-view.git'
-        licenses = ['Apache-2.0']
-        labels = ['android', 'charts', 'view', 'opensource', 'library']
-        publicDownloadNumbers = true
-        version {
-            name = versionName
-            desc = 'Release v' + versionName
-            vcsTag = versionName
-            gpg {
-                sign = true
-                passphrase = bintrayProps['bintray.gpg.passphrase']
+        user = bintrayProps['bintray.user']
+        key = bintrayProps['bintray.key']
+        configurations = ['archives']
+        dryRun = false
+        publish = true
+        pkg {
+            repo = 'maven'
+            name = 'timeline-chart-view'
+            desc = 'An android view to represent data over a timeline.'
+            websiteUrl = 'https://github.com/jruesga/timeline-chart-view'
+            issueTrackerUrl = 'https://github.com/jruesga/timeline-chart-view/issues'
+            vcsUrl = 'https://github.com/jruesga/timeline-chart-view.git'
+            licenses = ['Apache-2.0']
+            labels = ['android', 'charts', 'view', 'opensource', 'library']
+            publicDownloadNumbers = true
+            version {
+                name = versionName
+                desc = 'Release v' + versionName
+                vcsTag = versionName
+                gpg {
+                    sign = true
+                    passphrase = bintrayProps['bintray.gpg.passphrase']
+                }
             }
         }
     }
