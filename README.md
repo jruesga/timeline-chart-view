@@ -86,7 +86,7 @@ Check out the *sample* directory for a basic usage of the library.
 
 You can configure the some of the behaviour at xml style or at runtime. In addition of the javadoc description in the source code, following is an extended list of the main available behaviours (check the source code and the sample app to obtain a more detail explanation of every property).
 
-**tlcGraphBackground**: Background color of the graph area. This value also determines the autogereated palette of colors, if no user palette was used. **#setGraphAreaBackground(int)** can be used at runtime to set this color.
+**tlcGraphBackground**: Background color of the graph area. This value also determines the auto-generated palette of colors, if no user palette was used. **#setGraphAreaBackground(int)** can be used at runtime to set this color.
 
 **tlcFooterBackground**: Background color of the footer area. **#setFooterAreaBackground(int)** can be used at runtime to set this color.
 

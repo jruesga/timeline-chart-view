@@ -163,7 +163,7 @@ public class SampleActivity extends AppCompatActivity {
 
         setContentView(R.layout.sample_activity);
 
-        mToolbar = (Toolbar) findViewById(R.id.toolbar);
+        mToolbar = findViewById(R.id.toolbar);
         setSupportActionBar(mToolbar);
         ActionBar actionBar = getSupportActionBar();
         if (actionBar != null) {
@@ -172,26 +172,26 @@ public class SampleActivity extends AppCompatActivity {
         }
 
         // Buttons
-        Button button = (Button) findViewById(R.id.add);
+        Button button = findViewById(R.id.add);
         button.setOnClickListener(mClickListener);
-        button = (Button) findViewById(R.id.delete);
+        button = findViewById(R.id.delete);
         button.setOnClickListener(mClickListener);
-        button = (Button) findViewById(R.id.update);
+        button = findViewById(R.id.update);
         button.setOnClickListener(mClickListener);
-        button = (Button) findViewById(R.id.reload);
+        button = findViewById(R.id.reload);
         button.setOnClickListener(mClickListener);
-        button = (Button) findViewById(R.id.live_update);
+        button = findViewById(R.id.live_update);
         button.setOnClickListener(mClickListener);
-        button = (Button) findViewById(R.id.mode);
+        button = findViewById(R.id.mode);
         button.setOnClickListener(mClickListener);
-        button = (Button) findViewById(R.id.footer);
+        button = findViewById(R.id.footer);
         button.setOnClickListener(mClickListener);
-        button = (Button) findViewById(R.id.color);
+        button = findViewById(R.id.color);
         button.setOnClickListener(mClickListener);
-        button = (Button) findViewById(R.id.sound);
+        button = findViewById(R.id.sound);
         button.setOnClickListener(mClickListener);
 
-        button = (Button) findViewById(R.id.mode);
+        button = findViewById(R.id.mode);
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -209,22 +209,22 @@ public class SampleActivity extends AppCompatActivity {
         mCursor = createInMemoryCursor();
 
         // Retrieve the data and inject the cursor so the view can start observing changes
-        mGraph = (TimelineChartView) findViewById(R.id.graph);
+        mGraph = findViewById(R.id.graph);
         mMode = mGraph.getGraphMode();
         mSound = mGraph.isPlaySelectionSoundEffect() ? 1 : 0;
         mSound += mGraph.getSelectionSoundEffectSource() != 0 ? 1 : 0;
 
         // Setup info view
         LayoutInflater inflater = LayoutInflater.from(this);
-        mTimestamp = (TextView) findViewById(R.id.item_timestamp);
-        ViewGroup series = (ViewGroup) findViewById(R.id.item_series);
+        mTimestamp = findViewById(R.id.item_timestamp);
+        ViewGroup series = findViewById(R.id.item_series);
         mSeries = new TextView[COLUMN_NAMES.length - 1];
         mSeriesColors = new View[COLUMN_NAMES.length - 1];
         for (int i = 1; i < COLUMN_NAMES.length; i++) {
             View v = inflater.inflate(R.layout.serie_item_layout, series, false);
-            TextView title = (TextView) v.findViewById(R.id.title);
+            TextView title = v.findViewById(R.id.title);
             title.setText(getString(R.string.item_name, COLUMN_NAMES[i]));
-            mSeries[i - 1] = (TextView) v.findViewById(R.id.value);
+            mSeries[i - 1] = v.findViewById(R.id.value);
             mSeries[i - 1].setText("-");
             mSeriesColors[i - 1] = v.findViewById(R.id.color);
             mSeriesColors[i - 1].setBackgroundColor(Color.TRANSPARENT);

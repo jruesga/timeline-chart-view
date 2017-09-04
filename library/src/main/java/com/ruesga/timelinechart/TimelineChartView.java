@@ -42,7 +42,6 @@ import android.support.annotation.RawRes;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.util.LongSparseArray;
 import android.support.v4.util.Pair;
-import android.support.v4.view.VelocityTrackerCompat;
 import android.support.v4.view.ViewCompat;
 import android.text.DynamicLayout;
 import android.text.Layout;
@@ -119,7 +118,7 @@ import java.util.TimeZone;
  * The view supports various graph mode representations that can be established via
  * {@code tlcGraphMode} attribute or {@link #setGraphMode(int)} method.<p />
  *
- * The view features an autogeneration of a material-based color palette based on the
+ * The view features an auto-generation of a material-based color palette based on the
  * background of the {@code tlcGraphBackground} attribute. User can override this
  * color palette with its own one.<p />
  *
@@ -136,7 +135,7 @@ import java.util.TimeZone;
  *
  * <ul>
  *     <li><b>tlcGraphBackground</b>: Background color of the graph area. This value
- *         also determines the autogereated palette of colors, if no user palette was
+ *         also determines the auto-generated palette of colors, if no user palette was
  *         used. {@link #setGraphAreaBackground(int)} can be used at runtime to
  *         set this color.</li><p />
  *
@@ -191,6 +190,7 @@ import java.util.TimeZone;
  *         behaviour when selection requires to be ensured.</li><p />
  * </ul>
  */
+@SuppressWarnings({"unused", "WeakerAccess"})
 public class TimelineChartView extends View {
 
     private static final String TAG = "TimelineChartView";
@@ -549,9 +549,9 @@ public class TimelineChartView extends View {
 
     private OnClickItemListener mOnClickItemCallback;
     private OnLongClickItemListener mOnLongClickItemCallback;
-    private Set<OnSelectedItemChangedListener> mOnSelectedItemChangedCallbacks =
+    private final Set<OnSelectedItemChangedListener> mOnSelectedItemChangedCallbacks =
             Collections.synchronizedSet(new HashSet<OnSelectedItemChangedListener>());
-    private Set<OnColorPaletteChangedListener> mOnColorPaletteChangedCallbacks =
+    private final Set<OnColorPaletteChangedListener> mOnColorPaletteChangedCallbacks =
             Collections.synchronizedSet(new HashSet<OnColorPaletteChangedListener>());
 
     private boolean mInZoomOut = false;
@@ -681,7 +681,7 @@ public class TimelineChartView extends View {
         // Initialize stuff
         setupBackgroundHandler();
         setupTickLabels();
-        if (ViewCompat.getOverScrollMode(this) != ViewCompat.OVER_SCROLL_NEVER) {
+        if (getOverScrollMode() != OVER_SCROLL_NEVER) {
             setupEdgeEffects();
         }
         setupAnimators();
@@ -841,9 +841,9 @@ public class TimelineChartView extends View {
 
     /**
      * Returns the graph mode representation.
-     * @see {@link #GRAPH_MODE_BARS}
-     * @see {@link #GRAPH_MODE_BARS_STACK}
-     * @see {@link #GRAPH_MODE_BARS_SIDE_BY_SIDE}
+     * @see #GRAPH_MODE_BARS
+     * @see #GRAPH_MODE_BARS_STACK}
+     * @see #GRAPH_MODE_BARS_SIDE_BY_SIDE
      */
     public int getGraphMode() {
         return mGraphMode;
@@ -851,9 +851,9 @@ public class TimelineChartView extends View {
 
     /**
      * Sets the graph mode representation.
-     * @see {@link #GRAPH_MODE_BARS}
-     * @see {@link #GRAPH_MODE_BARS_STACK}
-     * @see {@link #GRAPH_MODE_BARS_SIDE_BY_SIDE}
+     * @see #GRAPH_MODE_BARS
+     * @see #GRAPH_MODE_BARS_STACK
+     * @see #GRAPH_MODE_BARS_SIDE_BY_SIDE
      */
     public void setGraphMode(int mode) {
         if (mode != mGraphMode) {
@@ -928,7 +928,7 @@ public class TimelineChartView extends View {
     /**
      * Returns the current color palette (it could be a combination of the user
      * palette and the generated one).
-     * @see {@link #setUserPalette(int[])}
+     * @see #setUserPalette(int[])
      */
     public int[] getCurrentPalette() {
         return mCurrentPalette;
@@ -968,7 +968,7 @@ public class TimelineChartView extends View {
 
     /**
      * Returns the callback which listen for click events on items.
-     * @see {@link com.ruesga.timelinechart.TimelineChartView.OnClickItemListener}
+     * @see com.ruesga.timelinechart.TimelineChartView.OnClickItemListener
      */
     public OnClickItemListener getOnClickItemListener() {
         return mOnClickItemCallback;
@@ -976,7 +976,7 @@ public class TimelineChartView extends View {
 
     /**
      * Returns the callback which will listen for click events on items.
-     * @see {@link com.ruesga.timelinechart.TimelineChartView.OnClickItemListener}
+     * @see com.ruesga.timelinechart.TimelineChartView.OnClickItemListener
      */
     public void setOnClickItemListener(OnClickItemListener cb) {
         mOnClickItemCallback = cb;
@@ -984,7 +984,7 @@ public class TimelineChartView extends View {
 
     /**
      * Returns the callback which listen for long click events on items.
-     * @see {@link com.ruesga.timelinechart.TimelineChartView.OnLongClickItemListener}
+     * @see com.ruesga.timelinechart.TimelineChartView.OnLongClickItemListener
      */
     public OnLongClickItemListener getOnLongClickItemListener() {
         return mOnLongClickItemCallback;
@@ -992,7 +992,7 @@ public class TimelineChartView extends View {
 
     /**
      * Sets the callback which will listen for click events on items.
-     * @see {@link com.ruesga.timelinechart.TimelineChartView.OnLongClickItemListener}
+     * @see com.ruesga.timelinechart.TimelineChartView.OnLongClickItemListener
      */
     public void setOnLongClickItemListener(OnLongClickItemListener cb) {
         mOnLongClickItemCallback = cb;
@@ -1000,7 +1000,7 @@ public class TimelineChartView extends View {
 
     /**
      * Register the callback as a listener to start receiving item selection changes.
-     * @see {@link com.ruesga.timelinechart.TimelineChartView.OnSelectedItemChangedListener}
+     * @see com.ruesga.timelinechart.TimelineChartView.OnSelectedItemChangedListener
      */
     public void addOnSelectedItemChangedListener(OnSelectedItemChangedListener cb) {
         mOnSelectedItemChangedCallbacks.add(cb);
@@ -1008,7 +1008,7 @@ public class TimelineChartView extends View {
 
     /**
      * Unregister the callback as a listener to stop receiving item selection changes.
-     * @see {@link com.ruesga.timelinechart.TimelineChartView.OnSelectedItemChangedListener}
+     * @see com.ruesga.timelinechart.TimelineChartView.OnSelectedItemChangedListener
      */
     public void removeOnSelectedItemChangedListener(OnSelectedItemChangedListener cb) {
         mOnSelectedItemChangedCallbacks.remove(cb);
@@ -1016,7 +1016,7 @@ public class TimelineChartView extends View {
 
     /**
      * Register the callback as a listener to start receiving color palette changes.
-     * @see {@link com.ruesga.timelinechart.TimelineChartView.OnColorPaletteChangedListener}
+     * @see com.ruesga.timelinechart.TimelineChartView.OnColorPaletteChangedListener
      */
     public void addOnColorPaletteChangedListener(OnColorPaletteChangedListener cb) {
         mOnColorPaletteChangedCallbacks.add(cb);
@@ -1024,7 +1024,7 @@ public class TimelineChartView extends View {
 
     /**
      * Unregister the callback as a listener to stop receiving color palette changes.
-     * @see {@link com.ruesga.timelinechart.TimelineChartView.OnColorPaletteChangedListener}
+     * @see com.ruesga.timelinechart.TimelineChartView.OnColorPaletteChangedListener
      */
     public void removeOnColorPaletteChangedListener(OnColorPaletteChangedListener cb) {
         mOnColorPaletteChangedCallbacks.remove(cb);
@@ -1033,8 +1033,8 @@ public class TimelineChartView extends View {
     /**
      * Registers the cursor and start observing changes on it. This method won't perform
      * any sort of optimization in the data processing.
-     * @see {@link #observeData(Cursor, int)}
-     * @see {@link #NO_OPTIMIZATION}
+     * @see #observeData(Cursor, int)
+     * @see #NO_OPTIMIZATION}
      */
     public void observeData(Cursor c) {
         observeData(c, NO_OPTIMIZATION);
@@ -1055,10 +1055,10 @@ public class TimelineChartView extends View {
      *
      * @param c the cursor to observe.
      * @param flag An optimization flag. See optimization constants for a description of
-     *             what every optimizion does.
-     * @see {@link #NO_OPTIMIZATION}
-     * @see {@link #NO_DELETES_OPTIMIZATION}
-     * @see {@link #ONLY_ADDITIONS_OPTIMIZATION}
+     *             what every optimization does.
+     * @see #NO_OPTIMIZATION
+     * @see #NO_DELETES_OPTIMIZATION
+     * @see #ONLY_ADDITIONS_OPTIMIZATION
      */
     public void observeData(Cursor c, int flag) {
         synchronized (mCursorLock) {
@@ -1168,8 +1168,7 @@ public class TimelineChartView extends View {
                 }
 
                 if (mState >= STATE_MOVING) {
-                    final int velocity = (int) VelocityTrackerCompat.getXVelocity(
-                            mVelocityTracker, pointerId);
+                    final int velocity = (int) mVelocityTracker.getXVelocity(pointerId);
                     mScroller.forceFinished(true);
                     mState = STATE_FLINGING;
                     releaseEdgeEffects();
@@ -1204,9 +1203,9 @@ public class TimelineChartView extends View {
         synchronized (mLock) {
             needOverScroll = mData.size() >= Math.floor(mMaxBarItemsInScreen / 2);
         }
-        final int overScrollMode = ViewCompat.getOverScrollMode(this);
-        if (overScrollMode == ViewCompat.OVER_SCROLL_ALWAYS ||
-                (overScrollMode == ViewCompat.OVER_SCROLL_IF_CONTENT_SCROLLS && needOverScroll)) {
+        final int overScrollMode = getOverScrollMode();
+        if (overScrollMode == OVER_SCROLL_ALWAYS ||
+                (overScrollMode == OVER_SCROLL_IF_CONTENT_SCROLLS && needOverScroll)) {
             boolean needsInvalidate = false;
             if (mCurrentOffset > mMaxOffset) {
                 mEdgeEffectLeft.onPull(mCurrentOffset - mMaxOffset);
@@ -1248,9 +1247,9 @@ public class TimelineChartView extends View {
             synchronized (mLock) {
                 needOverScroll = mData.size() >= Math.floor(mMaxBarItemsInScreen / 2);
             }
-            final int overScrollMode = ViewCompat.getOverScrollMode(this);
-            if (overScrollMode == ViewCompat.OVER_SCROLL_ALWAYS || (needOverScroll &&
-                    overScrollMode == ViewCompat.OVER_SCROLL_IF_CONTENT_SCROLLS)) {
+            final int overScrollMode = getOverScrollMode();
+            if (overScrollMode == OVER_SCROLL_ALWAYS || (needOverScroll &&
+                    overScrollMode == OVER_SCROLL_IF_CONTENT_SCROLLS)) {
                 float x = mScroller.getCurrX();
                 if (x >= mMaxOffset && mEdgeEffectLeft.isFinished() && !mEdgeEffectLeftActive) {
                     mEdgeEffectLeft.onAbsorb((int) mScroller.getCurrVelocity());

@@ -30,19 +30,19 @@ import java.util.List;
 /**
  * An in-memory {@link Cursor} implementation.
  */
-public class InMemoryCursor implements Cursor {
+class InMemoryCursor implements Cursor {
 
     private static class Record {
         private Object[] mFields;
     }
 
-    private String[] mColumnNames;
-    private List<Record> mRecords = Collections.synchronizedList(new ArrayList<Record>());
+    private final String[] mColumnNames;
+    private final List<Record> mRecords = Collections.synchronizedList(new ArrayList<Record>());
     private int mCurrentPosition;
 
-    private List<DataSetObserver> mObservers = new ArrayList<>();
+    private final List<DataSetObserver> mObservers = new ArrayList<>();
     private Uri mNotificationUri;
-    private Bundle mExtras = new Bundle();
+    private final Bundle mExtras = new Bundle();
 
     /**
      * Creates a new cursor setting the columns names that will be used by this cursor. The
@@ -51,7 +51,7 @@ public class InMemoryCursor implements Cursor {
      * items above it will be ignored.
      * @param columnNames the columns names of this cursor.
      */
-    public InMemoryCursor(String[] columnNames) {
+    InMemoryCursor(String[] columnNames) {
         mCurrentPosition = -1;
         mColumnNames = columnNames;
     }
@@ -59,7 +59,7 @@ public class InMemoryCursor implements Cursor {
     /**
      * Adds all the {@link List} as new rows of the cursor.
      */
-    public void addAll(List<Object[]> data) {
+    void addAll(List<Object[]> data) {
         for (Object[] fields : data) {
             internalAdd(fields);
         }
@@ -90,7 +90,7 @@ public class InMemoryCursor implements Cursor {
      * Update the cursor with the given data at the position passed as argument.
      * @return if the row was found and updated.
      */
-    public boolean update(int position, Object[] data) {
+    boolean update(int position, Object[] data) {
         if (position >= 0 && position < mRecords.size()){
             Record record =  mRecords.get(position);
             int count = Math.min(record.mFields.length, data.length);
@@ -105,7 +105,7 @@ public class InMemoryCursor implements Cursor {
      * Remove the row at the passed position from the cursor if exists.
      * @return if the row was found and deleted.
      */
-    public boolean remove(int position) {
+    boolean remove(int position) {
         if (position >= 0 && position < mRecords.size()){
             mRecords.remove(position);
             if (mRecords.size() == 0) {
@@ -122,7 +122,7 @@ public class InMemoryCursor implements Cursor {
     /**
      * Clear the internal cursor data.
      */
-    public void removeAll() {
+    void removeAll() {
         if (mRecords.size() >= 0) {
             mRecords.clear();
             mCurrentPosition = -1;

@@ -36,11 +36,11 @@ class DynamicSpannableString implements CharSequence, GetChars, Spannable {
     private int[] mSpanData;
     private int mSpanCount;
 
-    public DynamicSpannableString(CharSequence source) {
+    DynamicSpannableString(CharSequence source) {
         this(source, 0, source.length());
     }
 
-    public DynamicSpannableString(CharSequence source, int start, int end) {
+    private DynamicSpannableString(CharSequence source, int start, int end) {
         mSpans = new Object[0];
         mSpanData = new int[0];
 

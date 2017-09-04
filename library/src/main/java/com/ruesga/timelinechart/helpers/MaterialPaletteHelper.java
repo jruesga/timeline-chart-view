@@ -69,18 +69,6 @@ public class MaterialPaletteHelper {
         return Color.rgb(rgb[0], rgb[1], rgb[2]);
     }
 
-    public static int getContrastColor(int color) {
-        float[] hsv = new float[3];
-        Color.RGBToHSV(Color.red(color), Color.green(color), Color.blue(color), hsv);
-        if (hsv[2] < 0.5) {
-            hsv[2] = 0.7f;
-        } else {
-            hsv[2] = 0.3f;
-        }
-        hsv[1] = hsv[1] * 0.2f;
-        return Color.HSVToColor(hsv);
-    }
-
     public static int getComplementaryColor(int color) {
         float[] hsv = new float[3];
         Color.RGBToHSV(Color.red(color), Color.green(color), Color.blue(color), hsv);

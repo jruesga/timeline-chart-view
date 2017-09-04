@@ -42,7 +42,7 @@ android {
             source = android.sourceSets.main.java.srcDirs
             def variantCompiledClassesDir = file("${buildDir}/intermediates/classes/${variant.dirName}/")
             classpath = files(
-                    variant.javaCompile.classpath,
+                    variant.javaCompiler.classpath,
                     variantCompiledClassesDir,
                     android.bootClasspath
             )
