@@ -45,6 +45,11 @@ subprojects {
                     versionCode = 9
                     versionName = rootProject.subprojects.ext.versionName[0]
                 }
+
+                compileOptions {
+                    sourceCompatibility = JavaVersion.VERSION_1_7
+                    targetCompatibility = JavaVersion.VERSION_1_7
+                }
             }
         }
     }
