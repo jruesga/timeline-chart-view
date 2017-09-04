@@ -1,7 +1,7 @@
 timeline-chart-view
 ===================
 
-### Description
+### Description [![Build Status](https://travis-ci.org/jruesga/timeline-chart-view.svg?branch=master)](https://travis-ci.org/jruesga/timeline-chart-view)
 
 An android view to represent data over a timeline.
 
