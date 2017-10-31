@@ -15,19 +15,21 @@
  */
 
 allprojects {
+    repositories {
+        google()
+        jcenter()
+    }
+}
+
+buildscript {
     buildscript {
         repositories {
             google()
             jcenter()
         }
-        dependencies {
-            classpath 'com.android.tools.build:gradle:2.3.3'
-        }
     }
-
-    repositories {
-        google()
-        jcenter()
+    dependencies {
+        classpath 'com.android.tools.build:gradle:3.0.0'
     }
 }
 
@@ -35,12 +37,12 @@ subprojects {
     afterEvaluate {project ->
         if (project.hasProperty("android")) {
             android {
-                compileSdkVersion 26
-                buildToolsVersion '26.0.1'
+                compileSdkVersion 27
+                buildToolsVersion '27.0.0'
 
                 defaultConfig {
                     minSdkVersion 15
-                    targetSdkVersion 26
+                    targetSdkVersion 27
 
                     versionCode = 9
                     versionName = rootProject.subprojects.ext.versionName[0]
@@ -55,7 +57,7 @@ subprojects {
     }
 
     ext {
-        supportVersion = '26.0.1'
+        supportVersion = '27.0.0'
         versionName = '1.0.1'
     }
 }

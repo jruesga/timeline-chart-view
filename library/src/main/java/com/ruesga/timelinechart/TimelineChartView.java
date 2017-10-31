@@ -1095,6 +1095,7 @@ public class TimelineChartView extends View {
 
     /** {@inheritDoc} */
     @Override
+    @SuppressWarnings("ClickableViewAccessibility")
     public boolean onTouchEvent(final MotionEvent event) {
         // Ignore events while performing scrolling animation
         if (mState == STATE_ZOOMING) {

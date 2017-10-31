@@ -4,11 +4,11 @@ def supportVersion = rootProject.subprojects.ext.supportVersion[0]
 def appName = "TimelineChart View Sample"
 
 dependencies {
-    compile 'com.android.support:support-v4:' + supportVersion
-    compile 'com.android.support:appcompat-v7:' + supportVersion
-    compile 'com.android.support:design:' + supportVersion
-    compile 'com.github.ismaeltoe:flowlayout:1.0'
-    compile project(':timeline-chart-view')
+    implementation project(':timeline-chart-view')
+    implementation 'com.android.support:support-v4:' + supportVersion
+    implementation 'com.android.support:appcompat-v7:' + supportVersion
+    implementation 'com.android.support:design:' + supportVersion
+    implementation 'com.github.ismaeltoe:flowlayout:1.0'
 }
 
 android {
