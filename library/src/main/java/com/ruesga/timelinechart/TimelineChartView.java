@@ -1863,6 +1863,8 @@ public class TimelineChartView extends View {
     }
 
     private void releaseSoundEffects() {
+        if (mSoundEffectMP == null)
+            return;
         if (mSoundEffectMP.isPlaying()) {
             mSoundEffectMP.stop();
         }
